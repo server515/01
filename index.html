@@ -1,0 +1,1949 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>PCB Viewer Otimizado</title>
+<style>
+  :root { --top-h: 54px; --side-w: 72px; background: #000; color: #eee; }
+  html,body { height:100%; margin:0; background:#000; font-family:system-ui, Arial; }
+  #app {
+    display:grid;
+    grid-template-columns: var(--side-w) 1fr;
+    grid-template-rows: var(--top-h) 1fr;
+    grid-template-areas:
+      "top top"
+      "side canvas";
+    height:100vh;
+  }
+  #topbar, #sidebar {
+    background:#0f0f12;
+    box-sizing:border-box;
+    color:#eee;
+  }
+  #topbar {
+    grid-area:top;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size: 20px;
+    padding:4px 8px;
+    border-bottom:1px solid #1b1b20;
+  }
+  #sidebar {
+    grid-area:side;
+    padding:8px 6px;
+    overflow:auto;
+    border-right:1px solid #1b1b20;
+    scrollbar-width:none;
+  }
+  #sidebar::-webkit-scrollbar { display:none; }
+  .top-title { display:flex; align-items:center; justify-content:center; min-width:96px; }
+  h2{ margin:0; font-size:13px; color:#8fd3ff; line-height:1; }
+  input[type=file]{ width:190px; color:#8fd3ff; background:#16202a; padding:4px; border-radius:6px; border:1px solid #284357; font-size:12px; }
+  #layers { margin-top:6px; display:flex; flex-direction:column; gap:4px; }
+  .layer-btn {
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    padding:6px 3px;
+    border-radius:8px;
+    background:#111;
+    border:1px solid #222;
+    color:#fff;
+    cursor:pointer;
+    transition: border 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+  }
+  .layer-btn:hover { transform:translateY(-1px); }
+  .layer-color { width:24px; height:14px; border-radius:5px; border:1px solid #222; }
+  .layer-name { text-align:center; font-size:11px; line-height:1; font-weight:600; color:#8fd3ff; }
+  .layer-visible { opacity:1; }
+  .layer-hidden { opacity:0.32; filter:grayscale(0.75); }
+  #controls { display:flex; gap:5px; flex-wrap:nowrap; align-items:center; }
+  #controls button {
+    padding: 5px 9px;
+    background: #16202a;
+    color: #8fd3ff;
+    border: 1px solid #284357;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1.1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 30px;
+  }
+  #controls button svg {
+    width:18px;
+    height:18px;
+    display:block;
+  }
+  .voltage-icon {
+    font-size:17px;
+    font-weight:900;
+    letter-spacing:-0.04em;
+    line-height:1;
+  }
+  #controls button.toggle-on {
+    background:#214f73;
+    border-color:#4ca9e8;
+    color:#eaf7ff;
+  }
+  button:hover { background:#1a2834; border-color:#3a6787; }
+  button.warn { background:#a33; }
+  #info {
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:8px;
+    border-radius:8px;
+    background:#13161b;
+    border:1px solid #222831;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  #info .small { display:none; }
+  #topMeta {
+    margin-left:auto;
+    min-width:520px;
+    max-width:760px;
+  }
+  #selectionMeta {
+    display:grid;
+    grid-template-columns: minmax(180px, 2.4fr) minmax(70px, 0.9fr) minmax(90px, 1fr) minmax(100px, 1.15fr) minmax(100px, 1.15fr);
+    gap:3px;
+  }
+  .meta-card {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    justify-content:center;
+    gap:1px;
+    padding:4px 6px;
+    border-radius:6px;
+    background:#0d1014;
+    border:1px solid #1f252d;
+    text-align:left;
+  }
+  .meta-label {
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:#8fd3ff;
+    line-height:1;
+  }
+  .meta-value {
+    font-size:14px;
+    color:#ffffff;
+    font-weight:600;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    width:100%;
+    text-align:left;
+    line-height:1.05;
+  }
+  #canvas-wrap { grid-area:canvas; position:relative; min-width:0; min-height:0; background:#000; }
+  #canvas-wrap canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #baseCanvas { background:#000; }
+  #canvas { background:transparent; cursor:grab; }
+  #canvas:active { cursor:grabbing; }
+  .small { font-size:12px; color:#bbb; }
+  .sidebar-title { margin:0 0 6px 0; font-size:11px; color:#8fd3ff; text-align:center; }
+  #loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: #fff;
+    font-size: 20px;
+  }
+  #loading.hidden { display: none; }
+  .spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+<div id="loading" class="hidden">
+  <div class="spinner"></div>
+  <span id="loadingText">Loading...</span>
+</div>
+<div id="app">
+  <div id="topbar">
+    <div class="top-title">
+      <h2>SKILLBYPM</h2>
+    </div>
+      <div id="controls">
+      <button id="btnCenter" title="Center"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2"/></svg></button>
+      <button id="btnClear" title="Clear selection"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="btnZoomIn" title="Zoom In">+</button>
+      <button id="btnZoomOut" title="Zoom Out">-</button>
+      <button id="btnToggleDiodo" title="Show/hide diode" aria-label="Show or hide diode">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M8 7l7 5-7 5z" fill="currentColor"/>
+          <path d="M16 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M16 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button id="btnToggleVoltage" title="Show/hide voltage" aria-label="Show or hide voltage">
+        <span class="voltage-icon">V</span>
+      </button>
+    </div>
+
+
+    <div style="display:flex; align-items:center;">
+      <input id="searchInput" type="text" placeholder="Search component..." style="width:150px; color:#8fd3ff; background:#16202a; padding:4px; border-radius:6px 0 0 6px; border:1px solid #284357; font-size:12px; border-right:none;" list="componentList" />
+
+      <button id="searchBtn" style="padding:4px 8px; background:#16202a; color:#8fd3ff; border:1px solid #284357; border-radius:0 6px 6px 0; cursor:pointer; font-size:12px; border-left:none;">🔍</button>
+    </div>
+
+    <datalist id="componentList"></datalist>
+
+    <div style="display:flex; align-items:center;">
+      <input id="netSearchInput" type="text" placeholder="Search net..." style="width:150px; color:#8fd3ff; background:#16202a; padding:4px; border-radius:6px 0 0 6px; border:1px solid #284357; font-size:12px; border-right:none;" list="netList" />
+
+      <button id="netSearchBtn" style="padding:4px 8px; background:#16202a; color:#8fd3ff; border:1px solid #284357; border-radius:0 6px 6px 0; cursor:pointer; font-size:12px; border-left:none;">🔍</button>
+    </div>
+
+    <datalist id="netList"></datalist>
+    <div id="topMeta">
+      <div id="selectionMeta">
+        <div class="meta-card">
+          <div class="meta-label">NET</div>
+          <div id="metaNet" class="meta-value">-</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">PIN</div>
+          <div id="metaPin" class="meta-value">-</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">COMP</div>
+          <div id="metaComp" class="meta-value">-</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">DIODO</div>
+          <div id="metaDiodo" class="meta-value">-</div>
+        </div>
+        <div class="meta-card">
+          <div class="meta-label">VOLT</div>
+          <div id="metaVoltage" class="meta-value">-</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <h3 class="sidebar-title">Layers</h3>
+    <div id="layers"></div>
+  </div>
+
+  <div id="canvas-wrap">
+    <canvas id="baseCanvas"></canvas>
+    <canvas id="canvas"></canvas>
+  </div>
+
+</div>
+
+<script>
+const baseCanvas = document.getElementById('baseCanvas');
+const canvas = document.getElementById('canvas');
+const baseCtx = baseCanvas.getContext('2d');
+const overlayCtx = canvas.getContext('2d');
+let ctx = overlayCtx;
+
+let pcb = null;
+let zoom = 1;
+let offsetX = 0;
+let offsetY = 0;
+let isPanning = false;
+let lastMouse = {x:0,y:0};
+let pointerDown = null;
+let hasDragged = false;
+let layers = {};
+let visible = {};
+let layerColor = {};
+let embeddedImage = null;
+// Função para converter hex para rgba com transparência
+function hexToRGBA(hex, alpha){
+    hex = hex.replace('#','');
+    if(hex.length === 3) hex = hex.split('').map(h=>h+h).join('');
+    const r = parseInt(hex.substring(0,2),16);
+    const g = parseInt(hex.substring(2,4),16);
+    const b = parseInt(hex.substring(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// Palette original em rgba transparente (alpha = 0.3)
+const palette = [
+    hexToRGBA("#00E5FF",0.55), // ciano vivo
+    hexToRGBA("#39FF14",0.55), // verde neon
+    hexToRGBA("#2979FF",0.55), // azul vivo
+    hexToRGBA("#FFD600",0.55), // amarelo forte
+    hexToRGBA("#FF6D00",0.55), // laranja intenso
+    hexToRGBA("#00BFA5",0.55), // turquesa
+    hexToRGBA("#C6FF00",0.55), // lima viva
+    hexToRGBA("#651FFF",0.55), // roxo elétrico
+    hexToRGBA("#00C853",0.55), // verde forte
+    hexToRGBA("#FFC400",0.55), // âmbar
+    hexToRGBA("#00B0FF",0.55), // azul céu intenso
+    hexToRGBA("#AA00FF",0.55), // violeta vivo
+    hexToRGBA("#64DD17",0.55), // verde lima
+    hexToRGBA("#00F5D4",0.55), // aqua vibrante
+    hexToRGBA("#7C4DFF",0.55), // roxo brilhante
+    hexToRGBA("#AEEA00",0.55)  // amarelo esverdeado
+];
+
+let selectedNet = null;
+let selectedMeta = { net: '-', pin: '-', comp: '-', diodo: '-', voltage: '-' };
+let blinkInterval = null;
+let blinkState = false;
+let blinkMs = 500;
+let padHitList = [];
+let netPointMap = {};
+const DISABLED_LAYERS = new Set(['28']);
+const GND_COLOR = 'rgba(140,140,140,0.75)';
+const DIMMED_ALPHA = 0.5;
+let selectedComponent = null;
+let currentFileName = 'board.json';
+let showDiodoValues = false;
+let showVoltageValues = false;
+let segmentDrawGroups = [];
+const PIN_LABEL_MIN_ZOOM = 3.5;
+const PIN_LABEL_FONT_FAMILY = 'Arial';
+const PIN_LABEL_BG_FILL = 'rgba(102, 255, 102, 0.8)';
+let pinLabelLayoutVersion = 0;
+const pinLabelMetricsCache = new Map();
+let renderQueued = false;
+let staticDirty = true;
+let dynamicDirty = true;
+
+function invalidatePinLabelCaches(){
+  pinLabelLayoutVersion++;
+  pinLabelMetricsCache.clear();
+}
+
+function getCachedTextWidth(font, text){
+  const key = `${font}|${text}`;
+  const cached = pinLabelMetricsCache.get(key);
+  if(cached !== undefined) return cached;
+  ctx.font = font;
+  const width = ctx.measureText(text).width;
+  pinLabelMetricsCache.set(key, width);
+  return width;
+}
+
+function getPinLabelLayout(pin){
+  const pinLabel = String(pin.name || pin.number || pin.pin || pin.id || '').trim();
+  const netLabel = String(pin.netName || pin.net || '').trim();
+  const diodoLabel = showDiodoValues ? String(pin.diodo || '').trim() : '';
+  const voltageLabel = showVoltageValues ? String(pin.voltage || '').trim() : '';
+
+  if(!pinLabel && !netLabel && !diodoLabel && !voltageLabel) return null;
+
+  const zoomBucket = Math.round(zoom * 10) / 10;
+  const cacheKey = [
+    pinLabelLayoutVersion,
+    zoomBucket,
+    pinLabel,
+    netLabel,
+    diodoLabel,
+    voltageLabel
+  ].join('|');
+
+  if(pin.__labelLayout?.key === cacheKey) return pin.__labelLayout.value;
+
+  const base = zoomBucket * 0.7;
+  const pinFontSize = Math.max(8, base * 1.0);
+  const netFontSize = Math.max(8, base * 0.85);
+  const diodoFontSize = Math.max(15, base * 1.1);
+  const voltageFontSize = Math.max(10, base * 0.95);
+  const spacing = Math.max(2, zoomBucket * 0.2);
+  const stack = [];
+
+  if(diodoLabel){
+    stack.push({
+      text: diodoLabel,
+      color: '#1492ff',
+      size: diodoFontSize,
+      bg: PIN_LABEL_BG_FILL,
+      font: `${diodoFontSize}px ${PIN_LABEL_FONT_FAMILY}`
+    });
+  }
+
+  if(pinLabel){
+    stack.push({
+      text: pinLabel,
+      color: '#000000',
+      size: pinFontSize,
+      font: `${pinFontSize}px ${PIN_LABEL_FONT_FAMILY}`
+    });
+  }
+
+  if(netLabel){
+    stack.push({
+      text: netLabel,
+      color: '#000000',
+      size: netFontSize,
+      font: `${netFontSize}px ${PIN_LABEL_FONT_FAMILY}`
+    });
+  }
+
+  if(voltageLabel){
+    stack.push({
+      text: voltageLabel,
+      color: '#ff2a2a',
+      size: voltageFontSize,
+      font: `${voltageFontSize}px ${PIN_LABEL_FONT_FAMILY}`
+    });
+  }
+
+  let totalHeight = 0;
+  for(let i = 0; i < stack.length; i++){
+    const item = stack[i];
+    item.height = item.size;
+    if(item.bg){
+      item.paddingX = item.size * 0.6;
+      item.paddingY = item.size * 0.1;
+      item.textWidth = getCachedTextWidth(item.font, item.text);
+    }
+    totalHeight += item.height;
+    if(i < stack.length - 1) totalHeight += spacing;
+  }
+
+  const layout = { stack, spacing, totalHeight };
+  pin.__labelLayout = { key: cacheKey, value: layout };
+  return layout;
+}
+
+function buildSegmentDrawGroups(){
+  segmentDrawGroups = [];
+  if(!pcb?.segments?.length) return;
+
+  const groups = new Map();
+  for(const seg of pcb.segments){
+    const layerKey = String(seg.layer);
+    if(DISABLED_LAYERS.has(layerKey)) continue;
+    const netName = (seg.netName || '').toUpperCase() || 'UNKNOWN';
+    const groupKey = `${layerKey}::${netName}`;
+    let group = groups.get(groupKey);
+    if(!group){
+      group = { layerKey, netName, width: seg.width || 1, segments: [] };
+      groups.set(groupKey, group);
+    }
+    group.segments.push(seg);
+  }
+
+  segmentDrawGroups = Array.from(groups.values(), group => ({
+    layerKey: group.layerKey,
+    netName: group.netName,
+    width: group.width,
+    paths: connectSegments(group.segments)
+      .filter(path => path.length >= 2)
+      .map(path => ({ points: path, bbox: getPathBBox(path) }))
+  })).filter(group => group.paths.length > 0);
+}
+
+function resize(){
+  const rect = document.getElementById('canvas-wrap').getBoundingClientRect();
+  const width = Math.max(1, Math.floor(rect.width));
+  const height = Math.max(1, Math.floor(rect.height));
+  canvas.width = width;
+  canvas.height = height;
+  baseCanvas.width = width;
+  baseCanvas.height = height;
+  render();
+}
+window.addEventListener('resize', resize);
+resize();
+
+
+
+document.getElementById('searchInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    searchComponent();
+  }
+});
+
+document.getElementById('searchBtn').addEventListener('click', searchComponent);
+
+document.getElementById('netSearchInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    searchNet();
+  }
+});
+
+document.getElementById('netSearchBtn').addEventListener('click', searchNet);
+
+document.getElementById('btnCenter').addEventListener('click', ()=>{ centerPCB(); render(); });
+document.getElementById('btnClear').addEventListener('click', clearSelection);
+
+document.getElementById('btnZoomIn').addEventListener('click', zoomIn);
+document.getElementById('btnZoomOut').addEventListener('click', zoomOut);
+document.getElementById('btnToggleDiodo').addEventListener('click', ()=>toggleValueVisibility('diodo'));
+document.getElementById('btnToggleVoltage').addEventListener('click', ()=>toggleValueVisibility('voltage'));
+
+function updateValueToggleButtons(){
+  const diodoBtn = document.getElementById('btnToggleDiodo');
+  const voltageBtn = document.getElementById('btnToggleVoltage');
+  if(diodoBtn) diodoBtn.classList.toggle('toggle-on', showDiodoValues);
+  if(voltageBtn) voltageBtn.classList.toggle('toggle-on', showVoltageValues);
+}
+
+function toggleValueVisibility(type){
+  if(type === 'diodo') showDiodoValues = !showDiodoValues;
+  if(type === 'voltage') showVoltageValues = !showVoltageValues;
+  invalidatePinLabelCaches();
+  updateValueToggleButtons();
+  render();
+}
+
+function loadEmbeddedImage(){
+  embeddedImage = null;
+  if(pcb.embeddedImage){
+    const img = new Image();
+    img.onload = () => {
+      embeddedImage = img;
+      centerPCB();
+      render();
+      document.getElementById('loading').classList.add('hidden');
+    };
+    img.src = pcb.embeddedImage;
+  } else {
+    document.getElementById('loading').classList.add('hidden');
+  }
+}
+
+function prepareAfterLoad(){
+  invalidatePinLabelCaches();
+  detectLayers();        // define corretamente visibilidade inicial
+  buildLayerButtons();   // agora usa visible[L] correto
+  buildPadHitList();
+  buildSegmentDrawGroups();
+  buildNetPointMap();
+  updateValueToggleButtons();
+  loadEmbeddedImage();
+  populateComponentList();
+  populateNetList();
+  centerPCB();
+  clearSelection();
+  render();
+}
+
+function populateComponentList(){
+  const datalist = document.getElementById('componentList');
+  datalist.innerHTML = '';
+  if(!pcb.components) return;
+  const seen = new Set();
+  pcb.components.forEach(comp => {
+    const name = (comp.name || comp.id || '').trim();
+    if(name && !seen.has(name)){
+      seen.add(name);
+      const option = document.createElement('option');
+      option.value = name;
+      datalist.appendChild(option);
+    }
+  });
+}
+
+function populateNetList(){
+  const datalist = document.getElementById('netList');
+  datalist.innerHTML = '';
+  if(!netPointMap) return;
+  const seen = new Set();
+  Object.keys(netPointMap).forEach(net => {
+    if(net && !seen.has(net)){
+      seen.add(net);
+      const option = document.createElement('option');
+      option.value = net;
+      datalist.appendChild(option);
+    }
+  });
+}
+
+function searchComponent(){
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+  if(!query || !pcb.components) return;
+  const comp = pcb.components.find(c => (c.name || c.id || '').toLowerCase().includes(query));
+  if(comp){
+    selectedComponent = comp;
+    centerOnComponent(comp);
+    render();
+  }
+}
+
+function searchNet(){
+  const query = document.getElementById('netSearchInput').value.trim().toLowerCase();
+  if(!query || !netPointMap) return;
+  const net = Object.keys(netPointMap).find(n => n.toLowerCase().includes(query));
+  if(net){
+    selectNet(net);
+    const points = netPointMap[net];
+    if(points && points.length > 0){
+      centerOnPoint(points[0].x, points[0].y);
+    }
+    render();
+  }
+}
+
+
+function updateSelectionMeta(meta = {}){
+  selectedMeta = {
+    net: meta.net || (selectedNet || '-'),
+    pin: meta.pin || '-',
+    comp: meta.comp || '-',
+    diodo: meta.diodo || '-',
+    voltage: meta.voltage || '-'
+  };
+  const netEl = document.getElementById('metaNet');
+  const pinEl = document.getElementById('metaPin');
+  const compEl = document.getElementById('metaComp');
+  const diodoEl = document.getElementById('metaDiodo');
+  const voltageEl = document.getElementById('metaVoltage');
+  if(netEl) netEl.textContent = selectedMeta.net;
+  if(pinEl) pinEl.textContent = selectedMeta.pin;
+  if(compEl) compEl.textContent = selectedMeta.comp;
+  if(diodoEl) diodoEl.textContent = selectedMeta.diodo;
+  if(voltageEl) voltageEl.textContent = selectedMeta.voltage;
+}
+
+function detectLayers(){
+  layers = {}; visible={}; layerColor={};
+  const reg = L => {
+    if(L==null) return;
+    const key = String(L);
+    if(DISABLED_LAYERS.has(key)) return;
+    layers[key] = true;
+  };
+  if(pcb.segments) pcb.segments.forEach(s => reg(s.layer));
+  if(pcb.vias) pcb.vias.forEach(v => {
+    reg(v.layer);
+    reg(v.layerA);
+    reg(v.layerB);
+  });
+  if(pcb.pads) pcb.pads.forEach(p => reg(p.layer));
+  if(pcb.components) pcb.components.forEach(c => reg(c.layer));
+
+  const all = Object.keys(layers).sort((a,b)=>{
+    const na = Number(a);
+    const nb = Number(b);
+    const aNum = !Number.isNaN(na);
+    const bNum = !Number.isNaN(nb);
+    if(aNum && bNum) return na - nb;
+    if(aNum) return -1;
+    if(bNum) return 1;
+    return a.localeCompare(b);
+  });
+all.forEach((L,i)=>{
+  // Cores personalizadas para algumas camadas
+  if(L==='Top') layerColor[L] = '#ffde66d2';   // amarelo-bege para Top
+  else if(L==='17') layerColor[L] = '#dbd9d9c4'; // cinza para 17
+  else layerColor[L] = palette[i % palette.length];
+ // restante automático
+
+  // Inicializa visibilidade
+  visible[L] = (L==='Top' || L==='1' || L==='16');
+});
+
+}
+
+
+
+function buildLayerButtons(){
+  const box = document.getElementById('layers'); box.innerHTML='';
+  const toggleableLayers = Object.keys(layers).filter(L => L !== 'Top');
+  const allVisible = toggleableLayers.length > 0 && toggleableLayers.every(L => !!visible[L]);
+
+  const allRow = document.createElement('div');
+  allRow.className = allVisible ? 'layer-btn layer-visible' : 'layer-btn layer-hidden';
+  allRow.title = 'Ativar/desativar todas as layers';
+  const allColor = document.createElement('div'); allColor.className='layer-color'; allColor.style.background='#ffffff';
+  const allName = document.createElement('div'); allName.className='layer-name'; allName.textContent='ALL';
+  allRow.appendChild(allName); allRow.appendChild(allColor);
+  allRow.addEventListener('click', ()=>{
+    const nextState = !toggleableLayers.every(L => !!visible[L]);
+    toggleableLayers.forEach(L => { visible[L] = nextState; });
+    visible.Top = true;
+    buildLayerButtons();
+    render();
+  });
+  box.appendChild(allRow);
+
+  Object.keys(layers).sort((a,b)=>{
+    const na = Number(a);
+    const nb = Number(b);
+    const aNum = !Number.isNaN(na);
+    const bNum = !Number.isNaN(nb);
+    if(aNum && bNum) return na - nb;
+    if(aNum) return -1;
+    if(bNum) return 1;
+    return a.localeCompare(b);
+  }).forEach(L=>{
+    const row = document.createElement('div');
+    row.className = visible[L]?'layer-btn layer-visible':'layer-btn layer-hidden';
+    row.dataset.layer=L;
+    row.title = L === 'Top' ? 'Layer Top sempre ativa' : `Layer ${L}`;
+    const color = document.createElement('div'); color.className='layer-color'; color.style.background=layerColor[L]||'#888';
+    const name = document.createElement('div'); name.className='layer-name'; name.textContent=L;
+    const isLocked = L === 'Top';
+    row.appendChild(name); row.appendChild(color);
+    row.addEventListener('click', ()=>{
+      if(isLocked) return;
+      visible[L]=!visible[L];
+      row.classList.toggle('layer-visible', visible[L]);
+      row.classList.toggle('layer-hidden', !visible[L]);
+      render();
+    });
+    box.appendChild(row);
+  });
+}
+
+function getPCBBbox(){
+  if(!pcb) return null;
+  let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+  const updateBBox = (x, y) => {
+    if(x<minX) minX=x;
+    if(y<minY) minY=y;
+    if(x>maxX) maxX=x;
+    if(y>maxY) maxY=y;
+  };
+  if(pcb.segments) pcb.segments.forEach(s=>{ updateBBox(s.x1,s.y1); updateBBox(s.x2,s.y2); });
+  if(pcb.vias) pcb.vias.forEach(v=>updateBBox(v.x,v.y));
+  if(pcb.pads) pcb.pads.forEach(p=>{
+    if(p.outline?.points?.length){
+      p.outline.points.forEach(pt=>updateBBox(pt.x, pt.y));
+    } else {
+      updateBBox(p.x, p.y);
+    }
+  });
+  if(pcb.components) pcb.components.forEach(c=>{
+    updateBBox(c.x, c.y);
+    if(c.outline?.points?.length) c.outline.points.forEach(pt=>updateBBox(pt.x, pt.y));
+    if(c.pins) c.pins.forEach(p=>{
+      if(p.outline?.points?.length) p.outline.points.forEach(pt=>updateBBox(pt.x, pt.y));
+      else updateBBox(p.x, p.y);
+    });
+  });
+  return {minX, minY, maxX, maxY};
+}
+
+function centerPCB(){
+  if(!pcb) return;
+  const bbox = getPCBBbox();
+  if(!bbox) return;
+  const {minX, minY, maxX, maxY} = bbox;
+  const w = maxX - minX;
+  const h = maxY - minY;
+  if(w<=0 || h<=0) return;
+
+  // Calcula zoom para caber na tela
+  zoom = Math.min(canvas.width/w, canvas.height/h)*1.0;
+
+  // Centraliza
+  offsetX = canvas.width/2 - (minX + w/2)*zoom;
+  offsetY = canvas.height/2 + (minY + h/2)*zoom; // Note o sinal + porque invertido Y
+}
+
+function centerOnComponent(comp){
+  if(!comp) return;
+  let minX = comp.x - 5, minY = comp.y - 5, maxX = comp.x + 5, maxY = comp.y + 5;
+  if(comp.outline?.points?.length){
+    const bbox = comp.outline.points.reduce((b, p) => ({
+      minX: Math.min(b.minX, p.x),
+      minY: Math.min(b.minY, p.y),
+      maxX: Math.max(b.maxX, p.x),
+      maxY: Math.max(b.maxY, p.y)
+    }), {minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity});
+    minX = bbox.minX; minY = bbox.minY; maxX = bbox.maxX; maxY = bbox.maxY;
+  }
+  const w = maxX - minX;
+  const h = maxY - minY;
+  if(w <= 0 || h <= 0) return;
+
+  zoom = Math.min(canvas.width / w, canvas.height / h) * 0.4; // menos zoom para mais margem
+
+  offsetX = canvas.width / 2 - (minX + w / 2) * zoom;
+  offsetY = canvas.height / 2 + (minY + h / 2) * zoom;
+}
+
+function centerOnPoint(x, y){
+  zoom = 0.4; // zoom reduzido para centralizar o ponto
+  offsetX = canvas.width / 2 - x * zoom;
+  offsetY = canvas.height / 2 + y * zoom; // Y invertido
+}
+
+function zoomIn(){
+  const factor = 1.2;
+  const mouseX = canvas.width / 2;
+  const mouseY = canvas.height / 2;
+  const worldBefore = screenToWorld(mouseX, mouseY);
+  zoom *= factor;
+  zoom = Math.min(zoom, 1000);
+  offsetX = mouseX - worldBefore.x * zoom;
+  offsetY = mouseY + worldBefore.y * zoom;
+  render();
+}
+
+function zoomOut(){
+  const factor = 0.8;
+  const mouseX = canvas.width / 2;
+  const mouseY = canvas.height / 2;
+  const worldBefore = screenToWorld(mouseX, mouseY);
+  zoom *= factor;
+  zoom = Math.max(zoom, 0.0001);
+  offsetX = mouseX - worldBefore.x * zoom;
+  offsetY = mouseY + worldBefore.y * zoom;
+  render();
+}
+
+function wToSxy(x,y){ return { x:x*zoom+offsetX, y:-y*zoom+offsetY }; }
+function screenToWorld(x,y){ return { x:(x-offsetX)/zoom, y:-(y-offsetY)/zoom }; }
+
+canvas.addEventListener('mousedown', e=>{
+  isPanning=true;
+  lastMouse={x:e.clientX,y:e.clientY};
+  pointerDown={x:e.clientX,y:e.clientY};
+  hasDragged=false;
+});
+window.addEventListener('mouseup', e=>{ isPanning=false; });
+window.addEventListener('mousemove', e=>{
+  if(isPanning){
+    if(pointerDown){
+      const dx = e.clientX - pointerDown.x;
+      const dy = e.clientY - pointerDown.y;
+      if((dx * dx + dy * dy) > 16) hasDragged = true;
+    }
+    offsetX+=e.clientX-lastMouse.x; offsetY+=e.clientY-lastMouse.y; lastMouse={x:e.clientX,y:e.clientY}; render();
+  }
+});
+canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const zoomSpeed = 0.0025;
+    const factor = Math.exp(-e.deltaY * zoomSpeed);
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Ponto do mundo antes do zoom
+    const worldBefore = screenToWorld(mouseX, mouseY);
+
+    // Atualiza o zoom
+    zoom *= factor;
+    zoom = Math.max(0.0001, Math.min(zoom, 1000));
+
+    // Ponto do mundo depois do zoom
+    const worldAfter = worldBefore; // queremos que continue no mesmo ponto do mouse
+
+    // Ajusta offset para manter o ponto do mouse fixo
+    offsetX = mouseX - worldAfter.x * zoom;
+    offsetY = mouseY + worldAfter.y * zoom; // Note: invertido y
+
+    render();
+}, { passive: false });
+
+
+function buildPadHitList(){
+  padHitList=[];
+  if(!pcb.components) return;
+  for(const comp of pcb.components){
+    if(!comp.pins) continue;
+    for(let i=0;i<comp.pins.length;i++){
+      const pin=comp.pins[i];
+      const net=(pin.netName||pin.net||'').toString().toUpperCase();
+      let poly = null;
+      if(pin.outline?.points?.length) poly=pin.outline.points.map(p=>({x:p.x,y:p.y}));
+      else if(pin.width && pin.height){
+        const w=pin.width,h=pin.height;
+        poly=[{x:pin.x-w/2,y:pin.y-h/2},{x:pin.x+w/2,y:pin.y-h/2},{x:pin.x+w/2,y:pin.y+h/2},{x:pin.x-w/2,y:pin.y+h/2}];
+      } else { const s=2; poly=[{x:pin.x-s,y:pin.y-s},{x:pin.x+s,y:pin.y-s},{x:pin.x+s,y:pin.y+s},{x:pin.x-s,y:pin.y+s}]; }
+      const bbox = poly.reduce((b,p)=>({minX:Math.min(b.minX,p.x),minY:Math.min(b.minY,p.y),maxX:Math.max(b.maxX,p.x),maxY:Math.max(b.maxY,p.y)}), {minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity});
+      padHitList.push({netName:net,layer:String(pin.layer || comp.layer || 'Top'),compId:comp.id||comp.name||'',pinIndex:i,poly,bbox,pin,comp});
+    }
+  }
+}
+
+function buildNetPointMap(){
+  netPointMap = {};
+  const addPoint = (netName, x, y) => {
+    const net = String(netName || '').toUpperCase();
+    if(!net || net === 'GND' || net === 'NC' || net === 'UNCONNECTED') return;
+    if(typeof x !== 'number' || typeof y !== 'number') return;
+    if(!netPointMap[net]) netPointMap[net] = [];
+    netPointMap[net].push({ x, y });
+  };
+
+  if(pcb.components){
+    pcb.components.forEach(comp => {
+      if(!comp.pins) return;
+      comp.pins.forEach(pin => addPoint(pin.netName || pin.net, pin.x, pin.y));
+    });
+  }
+
+  if(pcb.pads){
+    pcb.pads.forEach(pad => addPoint(pad.netName || pad.net, pad.x, pad.y));
+  }
+
+  Object.keys(netPointMap).forEach(net => {
+    const seen = new Set();
+    netPointMap[net] = netPointMap[net].filter(pt => {
+      const key = `${pt.x.toFixed(4)}|${pt.y.toFixed(4)}`;
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a,b)=> a.x === b.x ? a.y - b.y : a.x - b.x);
+  });
+}
+
+function pointInPoly(x,y, poly){ let inside=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i].x, yi=poly[i].y, xj=poly[j].x, yj=poly[j].y; if(((yi>y)!==(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside; } return inside; }
+function pointHitsViaHalf(world, v){
+  const layerA = String(v.layerA ?? v.layer ?? '');
+  const layerB = String(v.layerB ?? v.layer ?? layerA);
+  const hasLayerA = !!layerA;
+  const hasLayerB = !!layerB;
+  const showA = hasLayerA && !DISABLED_LAYERS.has(layerA) && visible[layerA] !== false;
+  const showB = hasLayerB && !DISABLED_LAYERS.has(layerB) && visible[layerB] !== false;
+
+  if(!showA && !showB) return false;
+
+  const radius = Math.max(1 / Math.max(zoom, 0.0001), (v.drill || v.diameter || 2) * 0.45);
+  const dx = world.x - v.x;
+  const dy = world.y - v.y;
+  if((dx * dx + dy * dy) > radius * radius) return false;
+
+  if(showA && showB) return true;
+  if(showA) return dx >= 0;
+  if(showB) return dx <= 0;
+  return false;
+}
+
+canvas.addEventListener('click', ev=>{
+  if(!pcb) return;
+  if(hasDragged){
+    hasDragged = false;
+    pointerDown = null;
+    return;
+  }
+  pointerDown = null;
+  const rect = canvas.getBoundingClientRect();
+  const world = screenToWorld(ev.clientX-rect.left, ev.clientY-rect.top);
+  const viaHits = (pcb.vias || []).filter(v=>{
+    const net = (v.netName || '').toUpperCase();
+    if(!net || net==='GND' || net==='NC' || net==='UNCONNECTED') return false;
+    return pointHitsViaHalf(world, v);
+  }).sort((a,b)=>{
+    const ra = (a.drill || a.diameter || 2) * 0.45;
+    const rb = (b.drill || b.diameter || 2) * 0.45;
+    return ra - rb;
+  });
+
+  if(viaHits.length){
+    const via = viaHits[0];
+    selectNet(via.netName.toUpperCase(), {
+      net: via.netName.toUpperCase(),
+      pin: '-',
+      comp: '-',
+      diodo: '-',
+      voltage: '-'
+    });
+    return;
+  }
+
+  const hits = padHitList.filter(h=>{
+    const net = h.netName.toUpperCase();
+    if(net==='GND' || net==='NC' || net==='UNCONNECTED') return false;
+    if(!visible[h.layer]) return false;
+    if(world.x<h.bbox.minX||world.x>h.bbox.maxX||world.y<h.bbox.minY||world.y>h.bbox.maxY) return false;
+    return pointInPoly(world.x,world.y,h.poly);
+  }).sort((a,b)=>((a.bbox.maxX-a.bbox.minX)*(a.bbox.maxY-a.bbox.minY))-((b.bbox.maxX-b.bbox.minX)*(b.bbox.maxY-b.bbox.minY)));
+  if(hits.length){
+    const hit = hits[0];
+    selectNet(hit.netName.toUpperCase(), {
+      net: hit.netName.toUpperCase(),
+      pin: String(hit.pin?.name || hit.pin?.number || hit.pin?.pin || hit.pin?.id || '-'),
+      comp: String(hit.comp?.name || hit.comp?.id || hit.compId || '-'),
+      diodo: String(hit.pin?.diodo || '-'),
+      voltage: String(hit.pin?.voltage || '-')
+    });
+  }
+});
+
+function selectNet(netName, meta = {}){
+  selectedNet = netName.toUpperCase();
+  updateSelectionMeta(meta);
+  if(blinkInterval) clearInterval(blinkInterval);
+  blinkState=true;
+  blinkInterval=setInterval(()=>{ blinkState=!blinkState; render('dynamic'); }, blinkMs);
+  render();
+}
+
+function clearSelection(){
+  selectedNet=null;
+  selectedComponent=null;
+  updateSelectionMeta({ net:'-', pin:'-', comp:'-', diodo:'-', voltage:'-' });
+  if(blinkInterval){ clearInterval(blinkInterval); blinkInterval=null; }
+  blinkState=false;
+  render();
+}
+
+function getNetOpacity(netName){
+  if(!selectedNet) return 1;
+  return String(netName || '').toUpperCase() === selectedNet ? 1 : DIMMED_ALPHA;
+}
+
+function shouldShowFallbackGuide(){
+  const exemptLayers = new Set(['Top', '1', '16', '17', '28', '30']);
+  for(const layerKey of Object.keys(layers)){
+    if(exemptLayers.has(layerKey)) continue;
+    if(visible[layerKey]) return false;
+  }
+  return true;
+}
+
+function getSelectedNetGuidePoints(netName){
+  const targetNet = String(netName || '').toUpperCase();
+  if(!targetNet) return [];
+
+  const points = [];
+  const seen = new Set();
+  const addPoint = (layer, x, y) => {
+    const layerKey = String(layer || 'Top');
+    if(DISABLED_LAYERS.has(layerKey)) return;
+    if(visible[layerKey] === false) return;
+    if(typeof x !== 'number' || typeof y !== 'number') return;
+    const key = `${x.toFixed(4)}|${y.toFixed(4)}`;
+    if(seen.has(key)) return;
+    seen.add(key);
+    points.push({ x, y });
+  };
+
+  if(pcb.components){
+    pcb.components.forEach(comp => {
+      if(!comp.pins) return;
+      comp.pins.forEach(pin => {
+        const pinNet = String(pin.netName || pin.net || '').toUpperCase();
+        if(pinNet !== targetNet) return;
+        addPoint(pin.layer || comp.layer || 'Top', pin.x, pin.y);
+      });
+    });
+  }
+
+  if(pcb.pads){
+    pcb.pads.forEach(pad => {
+      const padNet = String(pad.netName || pad.net || '').toUpperCase();
+      if(padNet !== targetNet) return;
+      addPoint(pad.layer || 'Top', pad.x, pad.y);
+    });
+  }
+
+  return points.sort((a,b)=> a.x === b.x ? a.y - b.y : a.x - b.x);
+}
+
+function drawSelectedNetGuide(){
+  if(!selectedNet || !shouldShowFallbackGuide()) return;
+  const points = getSelectedNetGuidePoints(selectedNet);
+  if(!points || points.length < 2) return;
+
+  ctx.save();
+  ctx.strokeStyle = blinkState ? 'rgba(255,0,0,0.95)' : 'rgba(255,0,0,0.28)';
+  ctx.lineWidth = Math.max(2, zoom * 0.8);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  for(let i=0; i<points.length - 1; i++){
+    const left = points[i];
+    const right = points[i + 1];
+    const a = wToSxy(left.x, left.y);
+    const corner = wToSxy(right.x, left.y);
+    const b = wToSxy(right.x, right.y);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(corner.x, corner.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawPolygon(points, fillColor='transparent', strokeColor='#fff', lineWidth=1, highlight=false){
+  if(!points?.length) return;
+  ctx.save(); ctx.beginPath();
+  points.forEach((p,i)=>{ const s=wToSxy(p.x,p.y); i===0?ctx.moveTo(s.x,s.y):ctx.lineTo(s.x,s.y); });
+  ctx.closePath();
+  if(fillColor!=='transparent') ctx.fillStyle=fillColor, ctx.fill();
+  ctx.strokeStyle=strokeColor; ctx.lineWidth=lineWidth; ctx.stroke();
+  if(highlight){ ctx.save(); ctx.fillStyle='rgba(255,255,0,0.5)'; ctx.fill(); ctx.restore(); }
+  ctx.restore();
+}
+
+/* ================================
+   Helper: check if bbox is visible
+   ================================ */
+function bboxVisible(bbox){
+  const {minX,minY,maxX,maxY}=bbox;
+  const topLeft = wToSxy(minX,maxY), bottomRight = wToSxy(maxX,minY);
+  return !(bottomRight.x<0 || bottomRight.y<0 || topLeft.x>canvas.width || topLeft.y>canvas.height);
+}
+
+function getPathBBox(path){
+  return path.reduce((b, p) => ({
+    minX: Math.min(b.minX, p.x),
+    minY: Math.min(b.minY, p.y),
+    maxX: Math.max(b.maxX, p.x),
+    maxY: Math.max(b.maxY, p.y)
+  }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity });
+}
+
+function expandPolygon(points, centerX, centerY, padding){
+  if(!points?.length || !padding) return points;
+  return points.map(pt => {
+    const dx = pt.x - centerX;
+    const dy = pt.y - centerY;
+    const len = Math.hypot(dx, dy) || 1;
+    return {
+      x: pt.x + (dx / len) * padding,
+      y: pt.y + (dy / len) * padding
+    };
+  });
+}
+
+function drawRoundedPolygonPath(points, radius){
+  if(!points?.length) return;
+  if(points.length < 3){
+    const first = wToSxy(points[0].x, points[0].y);
+    ctx.moveTo(first.x, first.y);
+    for(let i=1; i<points.length; i++){
+      const p = wToSxy(points[i].x, points[i].y);
+      ctx.lineTo(p.x, p.y);
+    }
+    return;
+  }
+
+  const r = Math.max(0, radius || 0);
+  for(let i=0; i<points.length; i++){
+    const prev = points[(i - 1 + points.length) % points.length];
+    const curr = points[i];
+    const next = points[(i + 1) % points.length];
+
+    const v1x = curr.x - prev.x;
+    const v1y = curr.y - prev.y;
+    const v2x = next.x - curr.x;
+    const v2y = next.y - curr.y;
+    const len1 = Math.hypot(v1x, v1y) || 1;
+    const len2 = Math.hypot(v2x, v2y) || 1;
+    const cornerRadius = Math.min(r, len1 * 0.35, len2 * 0.35);
+
+    const start = {
+      x: curr.x - (v1x / len1) * cornerRadius,
+      y: curr.y - (v1y / len1) * cornerRadius
+    };
+    const end = {
+      x: curr.x + (v2x / len2) * cornerRadius,
+      y: curr.y + (v2y / len2) * cornerRadius
+    };
+
+    const startS = wToSxy(start.x, start.y);
+    const currS = wToSxy(curr.x, curr.y);
+    const endS = wToSxy(end.x, end.y);
+
+    if(i === 0) ctx.moveTo(startS.x, startS.y);
+    else ctx.lineTo(startS.x, startS.y);
+
+    ctx.quadraticCurveTo(currS.x, currS.y, endS.x, endS.y);
+  }
+  ctx.closePath();
+}
+
+/* ============================================================
+   Draw only visible
+   ============================================================ */
+function drawSegments(){
+  if(!segmentDrawGroups.length) return;
+
+  segmentDrawGroups.forEach(({ layerKey, netName, width, paths })=>{
+    if(!visible[layerKey]) return;
+
+    paths.forEach(pathEntry=>{
+      if(!bboxVisible(pathEntry.bbox)) return;
+
+      let baseColor = layerColor[layerKey] || '#0afc';
+      if(netName==='GND') baseColor=GND_COLOR;
+      if(netName==='NC') baseColor='rgba(255,255,0,0.4)';
+      ctx.save();
+      ctx.globalAlpha = getNetOpacity(netName);
+      ctx.strokeStyle=baseColor;
+      ctx.lineWidth=Math.max(1, width*zoom);
+      ctx.lineCap='round';
+      ctx.lineJoin='round';
+      ctx.beginPath();
+
+      const path = pathEntry.points;
+      const first = wToSxy(path[0].x, path[0].y);
+      ctx.moveTo(first.x, first.y);
+      for(let i=1; i<path.length; i++){
+        const p = wToSxy(path[i].x, path[i].y);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+
+      if(selectedNet && netName===selectedNet && blinkState){
+        ctx.save();
+        ctx.strokeStyle='rgba(255,0,0,0.7)';
+        ctx.lineWidth=Math.max(1, width*zoom);
+        ctx.lineCap='round';
+        ctx.lineJoin='round';
+        ctx.beginPath();
+        ctx.moveTo(first.x, first.y);
+        for(let i=1; i<path.length; i++){
+          const p = wToSxy(path[i].x, path[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+    });
+  });
+}
+
+// Função auxiliar para conectar segmentos em caminhos
+function connectSegments(segments){
+  const paths = [];
+  const used = new Set();
+
+  function findConnected(startSeg, currentPath){
+    used.add(startSeg);
+    currentPath.push({x: startSeg.x1, y: startSeg.y1});
+    currentPath.push({x: startSeg.x2, y: startSeg.y2});
+
+    // Procura segmentos conectados
+    for(let i=0; i<segments.length; i++){
+      if(used.has(segments[i])) continue;
+      const seg = segments[i];
+      const end = currentPath[currentPath.length-1];
+      if(Math.abs(end.x - seg.x1) < 0.01 && Math.abs(end.y - seg.y1) < 0.01){
+        findConnected(seg, currentPath);
+        break;
+      } else if(Math.abs(end.x - seg.x2) < 0.01 && Math.abs(end.y - seg.y2) < 0.01){
+        // Inverte o segmento
+        findConnected({x1: seg.x2, y1: seg.y2, x2: seg.x1, y2: seg.y1}, currentPath);
+        break;
+      }
+    }
+  }
+
+  for(let i=0; i<segments.length; i++){
+    if(used.has(segments[i])) continue;
+    const path = [];
+    findConnected(segments[i], path);
+    if(path.length >= 2) paths.push(path);
+  }
+
+  return paths;
+}
+
+function drawVias(){
+  if(!pcb.vias) return;
+  pcb.vias.forEach(v=>{
+    const layerA = String(v.layerA ?? v.layer ?? '');
+    const layerB = String(v.layerB ?? v.layer ?? layerA);
+    const hasLayerA = !!layerA;
+    const hasLayerB = !!layerB;
+    const showA = hasLayerA && !DISABLED_LAYERS.has(layerA) && visible[layerA] !== false;
+    const showB = hasLayerB && !DISABLED_LAYERS.has(layerB) && visible[layerB] !== false;
+
+    if(!showA && !showB) return;
+
+    const bbox={minX:v.x-1,maxX:v.x+1,minY:v.y-1,maxY:v.y+1};
+    if(!bboxVisible(bbox)) return;
+
+    const P = wToSxy(v.x,v.y);
+    let r = (v.drill||v.diameter||2) * zoom || 2*zoom;
+
+    r *= 0.45; // vias menores e mais proporcionais
+
+    const viaNet = (v.netName||'').toUpperCase();
+
+    const colorA = layerColor[layerA] || '#e9e9e991';
+    const colorB = layerColor[layerB] || colorA;
+    const radius = Math.max(1, r);
+
+    ctx.save();
+    ctx.globalAlpha = getNetOpacity(viaNet);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+
+    if(showA && showB && layerA !== layerB){
+      ctx.beginPath();
+      ctx.moveTo(P.x, P.y);
+      ctx.arc(P.x, P.y, radius, -Math.PI / 2, Math.PI / 2);
+      ctx.closePath();
+      ctx.fillStyle = colorA;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(P.x, P.y);
+      ctx.arc(P.x, P.y, radius, Math.PI / 2, 3 * Math.PI / 2);
+      ctx.closePath();
+      ctx.fillStyle = colorB;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(P.x, P.y, radius, 0, Math.PI*2);
+      ctx.fillStyle = showA ? colorA : colorB;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(P.x,P.y,radius,0,Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    // piscando se selecionada
+    if(selectedNet && viaNet===selectedNet && blinkState){
+      ctx.save();
+      ctx.strokeStyle='rgba(255,0,0,0.8)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.arc(P.x,P.y,radius,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+
+function drawComponents(){
+  if(!pcb.components) return;
+  for(const comp of pcb.components){
+    if(comp.layer && DISABLED_LAYERS.has(String(comp.layer))) continue;
+    if(comp.layer && visible[comp.layer]===false) continue;
+
+    const bbox={minX:comp.x-5,maxX:comp.x+5,minY:comp.y-5,maxY:comp.y+5};
+    if(!bboxVisible(bbox)) continue;
+
+    // Desenha o contorno do componente **somente se tiver mais de 1 pino**
+    if(comp.outline?.points?.length && (comp.pins?.length || 0) > 1){
+    // cor branca semi-transparente ou verde vivo se selecionado
+    const stroke = comp === selectedComponent ? '#00FF00' : 'rgba(255,255,255,0.4)';
+    const paddedOutline = expandPolygon(comp.outline.points, comp.x, comp.y, 0.8);
+
+    // desenha polígono com bordas arredondadas
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    drawRoundedPolygonPath(paddedOutline, 2.2);
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = Math.max(1, zoom * 2); // mais grosso para destaque
+    ctx.stroke();
+    ctx.restore();
+}
+
+
+    // Desenha o nome se o zoom for grande o suficiente
+    if(zoom >= 1.5){
+      ctx.save();
+      const p = wToSxy(comp.x, comp.y);
+      ctx.fillStyle = '#d9d9d9';
+      ctx.font = `${Math.max(10, zoom/2)}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(comp.name || comp.id || '', p.x, p.y);
+      ctx.restore();
+    }
+  }
+}
+
+
+function drawPads(){ if(!pcb.pads) return; pcb.pads.forEach(p=>{
+  if(p.layer && DISABLED_LAYERS.has(String(p.layer))) return;
+  if(p.layer && visible[p.layer]===false) return;
+  const bbox=p.outline?.points?.reduce((b,pt)=>({minX:Math.min(b.minX,pt.x),maxX:Math.max(b.maxX,pt.x),minY:Math.min(b.minY,pt.y),maxY:Math.max(b.maxY,pt.y)}),{minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity})||{minX:p.x-2,maxX:p.x+2,minY:p.y-2,maxY:p.y+2};
+  if(!bboxVisible(bbox)) return;
+  let fill = layerColor[p.layer];
+  let stroke = '#fffa';
+  const padNet = (p.netName||'').toUpperCase();
+  if(padNet==='GND') fill=GND_COLOR;
+  if(padNet==='NC'){ fill='transparent'; stroke='rgba(255,255,0,0.6)'; }
+  ctx.save();
+  if(p.outline?.points?.length) drawPolygon(p.outline.points, selectedNet===padNet && blinkState?'#ffff00':fill, stroke,1, selectedNet===padNet && blinkState);
+  ctx.restore();
+}); }
+function drawPins() {
+  if(!pcb.components) return;
+  for(const comp of pcb.components){
+    if(!comp.pins) continue;
+    for(const pin of comp.pins){
+      const layer = pin.layer || comp.layer || 'Top';
+      if(DISABLED_LAYERS.has(String(layer))) continue;
+      if(!visible[layer]) continue;
+
+      let useCircle = false;
+let diameter = 3; // default
+
+// Aplica círculo apenas se **não tiver exatamente 2 pinos** e for quadrado perfeito
+if(comp.pins.length !== 2 && pin.width && pin.height){
+  if(Math.abs(pin.width - pin.height)/Math.max(pin.width, pin.height) <= 0.01){
+    useCircle = true;
+    diameter = pin.width + 2;
+  }
+}
+
+
+
+      // Define cor
+      let fillColor = layerColor[layer]; // use direto
+const netName = (pin.netName || '').toUpperCase();
+if(netName==='GND') fillColor=GND_COLOR;
+if(netName==='NC') fillColor='transparent';
+if(netName==='UNCONNECTED') fillColor='#26ccffbb'; // azul transparente
+
+
+      // Calcula bounding box do pino
+      const bbox = useCircle
+        ? {minX: pin.x-diameter/2, minY: pin.y-diameter/2, maxX: pin.x+diameter/2, maxY: pin.y+diameter/2}
+        : pin.outline?.points?.reduce((b, p) => ({
+            minX: Math.min(b.minX, p.x),
+            minY: Math.min(b.minY, p.y),
+            maxX: Math.max(b.maxX, p.x),
+            maxY: Math.max(b.maxY, p.y)
+          }), {minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity})
+          || {minX: pin.x-1.5, minY: pin.y-1.5, maxX: pin.x+1.5, maxY: pin.y+1.5};
+
+      if(!bboxVisible(bbox)) continue;
+
+      // Verifica se mais da metade está fora da tela
+      const topLeft = wToSxy(bbox.minX, bbox.maxY);
+      const bottomRight = wToSxy(bbox.maxX, bbox.minY);
+      const w = bottomRight.x - topLeft.x;
+      const h = bottomRight.y - topLeft.y;
+      const visibleW = Math.min(canvas.width, Math.max(0, bottomRight.x)) - Math.max(0, topLeft.x);
+      const visibleH = Math.min(canvas.height, Math.max(0, bottomRight.y)) - Math.max(0, topLeft.y);
+      if(visibleW < w/2 || visibleH < h/2) continue; // >50% fora, ignora
+
+      // Desenha
+      ctx.save();
+      ctx.fillStyle = selectedNet===netName && blinkState ? 'red' : fillColor;
+      ctx.lineJoin = 'round';
+
+      if(useCircle){
+        const c = wToSxy(pin.x, pin.y);
+        const edge = wToSxy(pin.x + diameter/2, pin.y);
+        const radius = Math.abs(edge.x - c.x);
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, radius, 0, Math.PI*2);
+        ctx.fill();
+      } else if(pin.outline?.points?.length){
+        ctx.beginPath();
+        const first = wToSxy(pin.outline.points[0].x, pin.outline.points[0].y);
+        ctx.moveTo(first.x, first.y);
+        for(let i=1; i<pin.outline.points.length; i++){
+          const p = wToSxy(pin.outline.points[i].x, pin.outline.points[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        const w = pin.width ? pin.width/2 : 1.5;
+        const h = pin.height ? pin.height/2 : 1.5;
+        const poly = [
+          {x: pin.x-w, y: pin.y-h},
+          {x: pin.x+w, y: pin.y-h},
+          {x: pin.x+w, y: pin.y+h},
+          {x: pin.x-w, y: pin.y+h}
+        ];
+        ctx.beginPath();
+        const first = wToSxy(poly[0].x, poly[0].y);
+        ctx.moveTo(first.x, first.y);
+        for(let i=1; i<poly.length; i++){
+          const p = wToSxy(poly[i].x, poly[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      if(zoom >= PIN_LABEL_MIN_ZOOM){
+        const center = wToSxy(pin.x, pin.y);
+        if(center.x >= -160 && center.x <= canvas.width + 160 && center.y >= -160 && center.y <= canvas.height + 160){
+          const labelLayout = getPinLabelLayout(pin);
+          if(labelLayout){
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            let y = center.y - labelLayout.totalHeight / 2;
+            for(const item of labelLayout.stack){
+              if(item.bg){
+                ctx.fillStyle = item.bg;
+                ctx.fillRect(
+                  center.x - item.textWidth / 2 - item.paddingX,
+                  y - item.paddingY,
+                  item.textWidth + item.paddingX * 2,
+                  item.height + item.paddingY * 2
+                );
+              }
+
+              ctx.fillStyle = item.color;
+              ctx.font = item.font;
+              ctx.fillText(item.text, center.x, y + item.height / 2);
+              y += item.height + labelLayout.spacing;
+            }
+          }
+        }
+      }
+      ctx.restore();
+    }
+  }
+}
+
+function drawSegments(){
+  if(!segmentDrawGroups.length) return;
+
+  segmentDrawGroups.forEach(({ layerKey, netName, width, paths })=>{
+    if(!visible[layerKey]) return;
+
+    paths.forEach(pathEntry=>{
+      if(!bboxVisible(pathEntry.bbox)) return;
+
+      let baseColor = layerColor[layerKey] || '#0afc';
+      if(netName==='GND') baseColor=GND_COLOR;
+      if(netName==='NC') baseColor='rgba(255,255,0,0.4)';
+      ctx.save();
+      ctx.globalAlpha = getNetOpacity(netName);
+      ctx.strokeStyle = baseColor;
+      ctx.lineWidth = Math.max(1, width * zoom);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+
+      const path = pathEntry.points;
+      const first = wToSxy(path[0].x, path[0].y);
+      ctx.moveTo(first.x, first.y);
+      for(let i=1; i<path.length; i++){
+        const p = wToSxy(path[i].x, path[i].y);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    });
+  });
+}
+
+function drawSelectedSegmentsOverlay(){
+  if(!selectedNet || !blinkState) return;
+
+  segmentDrawGroups.forEach(({ layerKey, netName, width, paths })=>{
+    if(netName !== selectedNet) return;
+    if(!visible[layerKey]) return;
+
+    paths.forEach(pathEntry=>{
+      if(!bboxVisible(pathEntry.bbox)) return;
+      const path = pathEntry.points;
+      const first = wToSxy(path[0].x, path[0].y);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,0,0,0.7)';
+      ctx.lineWidth = Math.max(1, width * zoom);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(first.x, first.y);
+      for(let i=1; i<path.length; i++){
+        const p = wToSxy(path[i].x, path[i].y);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    });
+  });
+}
+
+function drawVias(){
+  if(!pcb.vias) return;
+  pcb.vias.forEach(v=>{
+    const layerA = String(v.layerA ?? v.layer ?? '');
+    const layerB = String(v.layerB ?? v.layer ?? layerA);
+    const hasLayerA = !!layerA;
+    const hasLayerB = !!layerB;
+    const showA = hasLayerA && !DISABLED_LAYERS.has(layerA) && visible[layerA] !== false;
+    const showB = hasLayerB && !DISABLED_LAYERS.has(layerB) && visible[layerB] !== false;
+
+    if(!showA && !showB) return;
+
+    const bbox={minX:v.x-1,maxX:v.x+1,minY:v.y-1,maxY:v.y+1};
+    if(!bboxVisible(bbox)) return;
+
+    const P = wToSxy(v.x,v.y);
+    let r = (v.drill||v.diameter||2) * zoom || 2*zoom;
+    r *= 0.45;
+
+    const viaNet = (v.netName||'').toUpperCase();
+    const colorA = layerColor[layerA] || '#e9e9e991';
+    const colorB = layerColor[layerB] || colorA;
+    const radius = Math.max(1, r);
+
+    ctx.save();
+    ctx.globalAlpha = getNetOpacity(viaNet);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+
+    if(showA && showB && layerA !== layerB){
+      ctx.beginPath();
+      ctx.moveTo(P.x, P.y);
+      ctx.arc(P.x, P.y, radius, -Math.PI / 2, Math.PI / 2);
+      ctx.closePath();
+      ctx.fillStyle = colorA;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(P.x, P.y);
+      ctx.arc(P.x, P.y, radius, Math.PI / 2, 3 * Math.PI / 2);
+      ctx.closePath();
+      ctx.fillStyle = colorB;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(P.x, P.y, radius, 0, Math.PI*2);
+      ctx.fillStyle = showA ? colorA : colorB;
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(P.x,P.y,radius,0,Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawSelectedViasOverlay(){
+  if(!selectedNet || !blinkState || !pcb?.vias) return;
+  pcb.vias.forEach(v=>{
+    const viaNet = (v.netName || '').toUpperCase();
+    if(viaNet !== selectedNet) return;
+
+    const layerA = String(v.layerA ?? v.layer ?? '');
+    const layerB = String(v.layerB ?? v.layer ?? layerA);
+    const hasLayerA = !!layerA;
+    const hasLayerB = !!layerB;
+    const showA = hasLayerA && !DISABLED_LAYERS.has(layerA) && visible[layerA] !== false;
+    const showB = hasLayerB && !DISABLED_LAYERS.has(layerB) && visible[layerB] !== false;
+    if(!showA && !showB) return;
+
+    const bbox = {minX:v.x-1,maxX:v.x+1,minY:v.y-1,maxY:v.y+1};
+    if(!bboxVisible(bbox)) return;
+
+    const P = wToSxy(v.x,v.y);
+    let r = (v.drill||v.diameter||2) * zoom || 2*zoom;
+    r *= 0.45;
+    const radius = Math.max(1, r);
+
+    ctx.save();
+    ctx.strokeStyle='rgba(255,0,0,0.8)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.arc(P.x,P.y,radius,0,Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function getPinRenderInfo(comp, pin){
+  let useCircle = false;
+  let diameter = 3;
+  if(comp.pins.length !== 2 && pin.width && pin.height){
+    if(Math.abs(pin.width - pin.height) / Math.max(pin.width, pin.height) <= 0.01){
+      useCircle = true;
+      diameter = pin.width + 2;
+    }
+  }
+
+  const bbox = useCircle
+    ? {minX: pin.x-diameter/2, minY: pin.y-diameter/2, maxX: pin.x+diameter/2, maxY: pin.y+diameter/2}
+    : pin.outline?.points?.reduce((b, p) => ({
+        minX: Math.min(b.minX, p.x),
+        minY: Math.min(b.minY, p.y),
+        maxX: Math.max(b.maxX, p.x),
+        maxY: Math.max(b.maxY, p.y)
+      }), {minX:Infinity,minY:Infinity,maxX:-Infinity,maxY:-Infinity})
+      || {minX: pin.x-1.5, minY: pin.y-1.5, maxX: pin.x+1.5, maxY: pin.y+1.5};
+
+  return { useCircle, diameter, bbox };
+}
+
+function drawPinShape(pin, renderInfo){
+  if(renderInfo.useCircle){
+    const c = wToSxy(pin.x, pin.y);
+    const edge = wToSxy(pin.x + renderInfo.diameter/2, pin.y);
+    const radius = Math.abs(edge.x - c.x);
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, radius, 0, Math.PI*2);
+    ctx.fill();
+    return;
+  }
+
+  if(pin.outline?.points?.length){
+    ctx.beginPath();
+    const first = wToSxy(pin.outline.points[0].x, pin.outline.points[0].y);
+    ctx.moveTo(first.x, first.y);
+    for(let i=1; i<pin.outline.points.length; i++){
+      const p = wToSxy(pin.outline.points[i].x, pin.outline.points[i].y);
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  const halfW = pin.width ? pin.width/2 : 1.5;
+  const halfH = pin.height ? pin.height/2 : 1.5;
+  const poly = [
+    {x: pin.x-halfW, y: pin.y-halfH},
+    {x: pin.x+halfW, y: pin.y-halfH},
+    {x: pin.x+halfW, y: pin.y+halfH},
+    {x: pin.x-halfW, y: pin.y+halfH}
+  ];
+  ctx.beginPath();
+  const first = wToSxy(poly[0].x, poly[0].y);
+  ctx.moveTo(first.x, first.y);
+  for(let i=1; i<poly.length; i++){
+    const p = wToSxy(poly[i].x, poly[i].y);
+    ctx.lineTo(p.x, p.y);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawPinLabels(pin){
+  if(zoom < PIN_LABEL_MIN_ZOOM) return;
+  const center = wToSxy(pin.x, pin.y);
+  if(center.x < -160 || center.x > canvas.width + 160 || center.y < -160 || center.y > canvas.height + 160) return;
+
+  const labelLayout = getPinLabelLayout(pin);
+  if(!labelLayout) return;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  let y = center.y - labelLayout.totalHeight / 2;
+  for(const item of labelLayout.stack){
+    if(item.bg){
+      ctx.fillStyle = item.bg;
+      ctx.fillRect(
+        center.x - item.textWidth / 2 - item.paddingX,
+        y - item.paddingY,
+        item.textWidth + item.paddingX * 2,
+        item.height + item.paddingY * 2
+      );
+    }
+    ctx.fillStyle = item.color;
+    ctx.font = item.font;
+    ctx.fillText(item.text, center.x, y + item.height / 2);
+    y += item.height + labelLayout.spacing;
+  }
+}
+
+function drawPins(options = {}) {
+  const { drawLabels = true, onlySelected = false, fillStyleOverride = null } = options;
+  if(!pcb.components) return;
+
+  for(const comp of pcb.components){
+    if(!comp.pins) continue;
+    for(const pin of comp.pins){
+      const layer = pin.layer || comp.layer || 'Top';
+      if(DISABLED_LAYERS.has(String(layer))) continue;
+      if(!visible[layer]) continue;
+
+      const netName = (pin.netName || '').toUpperCase();
+      if(onlySelected && netName !== selectedNet) continue;
+
+      let fillColor = layerColor[layer];
+      if(netName==='GND') fillColor=GND_COLOR;
+      if(netName==='NC') fillColor='transparent';
+      if(netName==='UNCONNECTED') fillColor='#26ccffbb';
+
+      const renderInfo = getPinRenderInfo(comp, pin);
+      if(!bboxVisible(renderInfo.bbox)) continue;
+
+      const topLeft = wToSxy(renderInfo.bbox.minX, renderInfo.bbox.maxY);
+      const bottomRight = wToSxy(renderInfo.bbox.maxX, renderInfo.bbox.minY);
+      const screenW = bottomRight.x - topLeft.x;
+      const screenH = bottomRight.y - topLeft.y;
+      const visibleW = Math.min(canvas.width, Math.max(0, bottomRight.x)) - Math.max(0, topLeft.x);
+      const visibleH = Math.min(canvas.height, Math.max(0, bottomRight.y)) - Math.max(0, topLeft.y);
+      if(visibleW < screenW/2 || visibleH < screenH/2) continue;
+
+      ctx.save();
+      ctx.fillStyle = fillStyleOverride || fillColor;
+      ctx.lineJoin = 'round';
+      drawPinShape(pin, renderInfo);
+      if(drawLabels) drawPinLabels(pin);
+      ctx.restore();
+    }
+  }
+}
+
+function drawSelectedPinsOverlay(){
+  if(!selectedNet || !blinkState) return;
+  drawPins({ drawLabels: false, onlySelected: true, fillStyleOverride: 'red' });
+}
+
+/* ============================================================
+   Main render
+   ============================================================ */
+function doRender(){
+  if(!pcb){ ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // Desenha a imagem embedded se existir
+  if(embeddedImage){
+    const bbox = getPCBBbox();
+    if(bbox){
+      const {minX, minY, maxX, maxY} = bbox;
+      const w = maxX - minX;
+      const h = maxY - minY;
+      const topLeft = wToSxy(minX, maxY);
+      const bottomRight = wToSxy(maxX, minY);
+      const screenW = bottomRight.x - topLeft.x;
+      const screenH = bottomRight.y - topLeft.y;
+      ctx.save();
+      ctx.globalAlpha = 1.0; // imagem opaca atrás do conteúdo
+      ctx.drawImage(embeddedImage, topLeft.x, topLeft.y, screenW, screenH);
+      ctx.restore();
+    }
+  }
+
+  drawSegments();
+  drawVias();
+  drawComponents();
+  drawPins(); // <-- aqui chamamos os pinos corretamente
+  drawSelectedNetGuide();
+}
+
+function render(){
+  if(renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    doRender();
+  });
+}
+
+function renderStaticLayer(){
+  ctx = baseCtx;
+  if(!pcb){
+    ctx.clearRect(0,0,baseCanvas.width,baseCanvas.height);
+    staticDirty = false;
+    return;
+  }
+
+  ctx.clearRect(0,0,baseCanvas.width,baseCanvas.height);
+
+  if(embeddedImage){
+    const bbox = getPCBBbox();
+    if(bbox){
+      const {minX, minY, maxX, maxY} = bbox;
+      const topLeft = wToSxy(minX, maxY);
+      const bottomRight = wToSxy(maxX, minY);
+      const screenW = bottomRight.x - topLeft.x;
+      const screenH = bottomRight.y - topLeft.y;
+      ctx.save();
+      ctx.globalAlpha = 1.0;
+      ctx.drawImage(embeddedImage, topLeft.x, topLeft.y, screenW, screenH);
+      ctx.restore();
+    }
+  }
+
+  drawSegments();
+  drawVias();
+  drawComponents();
+  drawPins();
+  staticDirty = false;
+}
+
+function renderDynamicLayer(){
+  ctx = overlayCtx;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(!pcb){
+    dynamicDirty = false;
+    return;
+  }
+
+  const onlyGuideOverlay = shouldShowFallbackGuide();
+  if(!onlyGuideOverlay){
+    drawSelectedSegmentsOverlay();
+    drawSelectedViasOverlay();
+  }
+  drawSelectedPinsOverlay();
+  drawSelectedNetGuide();
+  dynamicDirty = false;
+}
+
+function doRender(){
+  if(staticDirty) renderStaticLayer();
+  if(dynamicDirty) renderDynamicLayer();
+}
+
+function render(mode = 'full'){
+  if(mode === 'dynamic') dynamicDirty = true;
+  else {
+    staticDirty = true;
+    dynamicDirty = true;
+  }
+
+  if(renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    doRender();
+  });
+}
+
+const urlParams = new URLSearchParams(window.location.search);
+const fileParam = urlParams.get('file');
+if(fileParam){
+  currentFileName = String(fileParam.split(/[\\/]/).pop() || 'board.json');
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loadingText').textContent = 'loading bitmap...';
+  fetch(fileParam)
+    .then(response => {
+      if(!response.ok) throw new Error('404');
+      return response.text();
+    })
+    .then(text => {
+      document.getElementById('loadingText').textContent = 'loading...';
+      try {
+        pcb = JSON.parse(text);
+      } catch(err){
+        document.getElementById('loading').classList.add('hidden');
+        return;
+      }
+      prepareAfterLoad();
+    })
+    .catch(err => {
+      document.getElementById('loading').classList.add('hidden');
+    });
+}
+
+</script>
+</body>
+</html>
