@@ -196,6 +196,13 @@
       <div id="controls">
       <button id="btnCenter" title="Center"><svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="2"/></svg></button>
       <button id="btnClear" title="Clear selection"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="btnLoadJson" title="Carregar JSON local" aria-label="Carregar JSON local">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M3 7h5l2 3h11v9H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h9v1" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
+      <input id="jsonFileInput" type="file" accept=".json,application/json" style="display:none" />
       <button id="btnZoomIn" title="Zoom In">+</button>
       <button id="btnZoomOut" title="Zoom Out">-</button>
       <button id="btnToggleDiodo" title="Show/hide diode" aria-label="Show or hide diode">
@@ -498,10 +505,38 @@ document.getElementById('netSearchBtn').addEventListener('click', searchNet);
 document.getElementById('btnCenter').addEventListener('click', ()=>{ centerPCB(); render(); });
 document.getElementById('btnClear').addEventListener('click', clearSelection);
 
+document.getElementById('btnLoadJson').addEventListener('click', ()=> document.getElementById('jsonFileInput').click());
+document.getElementById('jsonFileInput').addEventListener('change', handleJsonFileChange);
+
 document.getElementById('btnZoomIn').addEventListener('click', zoomIn);
 document.getElementById('btnZoomOut').addEventListener('click', zoomOut);
 document.getElementById('btnToggleDiodo').addEventListener('click', ()=>toggleValueVisibility('diodo'));
 document.getElementById('btnToggleVoltage').addEventListener('click', ()=>toggleValueVisibility('voltage'));
+
+function handleJsonFileChange(event) {
+  const file = event.target.files && event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loadingText').textContent = 'Carregando JSON...';
+  reader.onload = () => {
+    try {
+      pcb = JSON.parse(reader.result);
+      currentFileName = file.name || 'board.json';
+      prepareAfterLoad();
+    } catch(err) {
+      console.error('JSON inválido', err);
+      document.getElementById('loadingText').textContent = 'JSON inválido';
+      setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1400);
+    }
+  };
+  reader.onerror = () => {
+    console.error('Erro ao ler arquivo JSON');
+    document.getElementById('loadingText').textContent = 'Erro ao ler arquivo';
+    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1400);
+  };
+  reader.readAsText(file);
+}
 
 function updateValueToggleButtons(){
   const diodoBtn = document.getElementById('btnToggleDiodo');
