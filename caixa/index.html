@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Caixa PDV</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">R$</span>
+          <div>
+            <strong>Caixa PDV</strong>
+            <small>controle local</small>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Navegação principal">
+          <button class="nav-button active" data-view="pdv" type="button">PDV</button>
+          <button class="nav-button" data-view="produtos" type="button">Produtos</button>
+          <button class="nav-button" data-view="vendas" type="button">Vendas</button>
+          <button class="nav-button locked" data-view="financeiro" type="button"><span>Financeiro</span><span class="lock-icon">🔒</span></button>
+          <button class="nav-button locked" data-view="config" type="button"><span>Configuração</span><span class="lock-icon">🔒</span></button>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <section class="view active" id="view-pdv">
+          <header class="page-header">
+            <div>
+              <h1 id="pdv-store-title">MINHA LOJA</h1>
+              <p>ATE AQUI NOS AJUDOU O SENHOR.</p>
+            </div>
+            <div class="header-actions">
+              <span class="status-pill" id="pdv-status">Caixa livre</span>
+              <button class="ghost-button" id="clear-cart" type="button">Limpar</button>
+              <button class="primary-button" id="finish-sale" type="button">Finalizar venda</button>
+            </div>
+          </header>
+
+          <div class="pdv-grid">
+            <section class="panel sale-panel">
+              <div class="free-cash-banner" id="free-cash-banner">CAIXA LIVRE</div>
+
+              <label class="field full">
+                <span>Produto</span>
+                <div class="product-search">
+                  <input id="sale-search" autocomplete="off" placeholder="Digite código, código de barras ou nome" />
+                  <div class="suggestions" id="sale-suggestions" role="listbox"></div>
+                </div>
+              </label>
+
+              <div class="table-wrap cart-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Qtd.</th>
+                      <th>Unit.</th>
+                      <th>Total</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="cart-body"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <aside class="panel checkout-panel">
+              <h2>Resumo</h2>
+              <div class="shortcut-panel" aria-label="Atalhos do PDV">
+                <div><kbd>F2</kbd><span>Iniciar venda</span></div>
+                <div><kbd>F3</kbd><span>Limpar venda</span></div>
+                <div><kbd>F10</kbd><span>Finalizar / confirmar</span></div>
+              </div>
+              <div class="summary-line">
+                <span>Itens</span>
+                <strong id="cart-items">0</strong>
+              </div>
+              <div class="summary-line">
+                <span>Subtotal</span>
+                <strong id="cart-subtotal">R$ 0,00</strong>
+              </div>
+              <div class="total-box">
+                <span>Total</span>
+                <strong id="cart-total">R$ 0,00</strong>
+              </div>
+            </aside>
+          </div>
+
+          <section class="panel stock-alert-panel hidden" id="stock-alert-panel">
+            <strong>Estoque baixo</strong>
+            <div id="stock-alert-list"></div>
+          </section>
+
+          <div class="pdv-clock" id="pdv-clock">--:--:--</div>
+        </section>
+
+        <section class="view" id="view-produtos">
+          <header class="page-header">
+            <div>
+              <h1>Produtos</h1>
+              <p>Cadastre produtos com compra, venda e estoque.</p>
+            </div>
+            <div class="header-actions">
+              <button class="primary-button" id="generate-barcode-labels" type="button">Gerar código de barras</button>
+            </div>
+          </header>
+
+          <div class="product-grid">
+            <form class="panel form-panel" id="product-form">
+              <input id="product-id" type="hidden" />
+              <label class="field">
+                <span>Nome</span>
+                <input id="product-name" required />
+              </label>
+              <label class="field">
+                <span>Código de barras</span>
+                <input id="product-barcode" required />
+              </label>
+              <label class="field">
+                <span>Valor de compra</span>
+                <input id="product-cost" type="number" min="0" step="0.01" required />
+              </label>
+              <label class="field">
+                <span>Valor de venda</span>
+                <input id="product-price" type="number" min="0" step="0.01" required />
+              </label>
+              <label class="field compact-number">
+                <span>Estoque</span>
+                <input id="product-stock" type="number" min="0" step="1" value="0" required />
+              </label>
+              <label class="field compact-number">
+                <span>Estoque mínimo</span>
+                <input id="product-min-stock" type="number" min="0" step="1" value="3" required />
+              </label>
+              <div class="form-actions">
+                <button class="ghost-button" id="cancel-product-edit" type="button">Cancelar</button>
+                <button class="primary-button" type="submit">Salvar produto</button>
+              </div>
+            </form>
+
+            <section class="panel">
+              <div class="section-toolbar">
+                <label class="field search-field">
+                  <span>Buscar</span>
+                  <input id="product-filter" placeholder="Nome ou código" />
+                </label>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Código</th>
+                      <th>Compra</th>
+                      <th>Venda</th>
+                      <th>Estoque</th>
+                      <th>Mín.</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="products-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="view-vendas">
+          <header class="page-header">
+            <div>
+              <h1>Vendas</h1>
+              <p>Histórico de vendas e reimpressão de cupom.</p>
+            </div>
+          </header>
+
+          <section class="panel">
+            <div class="section-toolbar">
+              <label class="field search-field">
+                <span>Buscar cupom</span>
+                <input id="sale-filter" placeholder="Ex: 7d06fbde" />
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Itens</th>
+                    <th>Pagamento</th>
+                    <th>Total</th>
+                    <th>Lucro</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="sales-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-financeiro">
+          <header class="page-header">
+            <div>
+              <h1>Financeiro</h1>
+              <p>Acompanhe faturamento, custo e lucro bruto.</p>
+            </div>
+            <div class="header-actions">
+              <button class="danger-button" id="close-month" type="button">Fechar caixa do mês</button>
+            </div>
+          </header>
+
+          <div class="metrics">
+            <article class="metric">
+              <span>Faturamento</span>
+              <strong id="metric-revenue">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Custo vendido</span>
+              <strong id="metric-cost">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Lucro bruto</span>
+              <strong id="metric-profit">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Ticket médio</span>
+              <strong id="metric-ticket">R$ 0,00</strong>
+            </article>
+          </div>
+
+          <section class="panel">
+            <h2>Resumo por pagamento</h2>
+            <div id="payment-summary" class="payment-summary"></div>
+          </section>
+
+          <section class="panel finance-history">
+            <h2>Fechamentos do caixa</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Vendas</th>
+                    <th>Faturamento</th>
+                    <th>Custo</th>
+                    <th>Lucro</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="closings-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="view-config">
+          <header class="page-header">
+            <div>
+              <h1>Configuração</h1>
+              <p>Dados impressos no cupom e ferramentas de backup.</p>
+            </div>
+          </header>
+
+          <div class="config-grid">
+            <form class="panel form-panel" id="store-form">
+              <label class="field">
+                <span>Nome da loja</span>
+                <input id="store-name" />
+              </label>
+              <label class="field">
+                <span>CNPJ / CPF</span>
+                <input id="store-doc" />
+              </label>
+              <label class="field">
+                <span>Endereço</span>
+                <input id="store-address" />
+              </label>
+              <label class="field">
+                <span>Telefone</span>
+                <input id="store-phone" />
+              </label>
+              <label class="field">
+                <span>Tema do sistema</span>
+                <select id="theme-select">
+                  <option value="default">Padrão azul e branco</option>
+                  <option value="blue-black">Azul e preto</option>
+                  <option value="pink">Rosa</option>
+                  <option value="pink-black">Rosa e preto</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Salvar configuração</button>
+              </div>
+            </form>
+
+            <section class="panel">
+              <h2>Dados</h2>
+              <div class="data-actions">
+                <button class="ghost-button" id="export-data" type="button">Exportar backup</button>
+                <label class="file-button">
+                  Importar backup
+                  <input id="import-data" type="file" accept="application/json" />
+                </label>
+                <button class="danger-button" id="clear-data" type="button">Apagar tudo</button>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="receipt-template">
+      <section class="receipt">
+        <div id="receipt-content"></div>
+      </section>
+    </template>
+
+    <dialog class="payment-modal" id="payment-modal">
+      <form class="payment-box" id="payment-form">
+        <header class="payment-header">
+          <div>
+            <h2>Finalizar venda</h2>
+            <p>Informe a forma de pagamento para registrar e imprimir.</p>
+          </div>
+          <button class="icon-button" id="close-payment-modal" type="button" aria-label="Fechar">x</button>
+        </header>
+
+        <div class="payment-total">
+          <span>Total da venda</span>
+          <strong id="modal-sale-total">R$ 0,00</strong>
+        </div>
+
+        <div class="discount-grid">
+          <label class="field">
+            <span>Tipo de desconto</span>
+            <select id="discount-type">
+              <option value="value">Valor R$</option>
+              <option value="percent">Porcentagem %</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Desconto</span>
+            <input id="sale-discount" type="number" min="0" step="0.01" value="0" />
+          </label>
+        </div>
+
+        <div class="summary-line">
+          <span>Desconto aplicado</span>
+          <strong id="discount-applied">R$ 0,00</strong>
+        </div>
+
+        <label class="field">
+          <span>Tipo de pagamento</span>
+          <select id="payment-method">
+            <option>Dinheiro</option>
+            <option>Pix</option>
+            <option>Débito</option>
+            <option>Crédito</option>
+          </select>
+        </label>
+
+        <label class="field" id="amount-paid-field">
+          <span>Valor pago</span>
+          <input id="amount-paid" type="number" min="0" step="0.01" value="0" />
+        </label>
+
+        <div class="summary-line">
+          <span>Troco</span>
+          <strong id="sale-change">R$ 0,00</strong>
+        </div>
+
+        <div class="form-actions">
+          <button class="ghost-button" id="cancel-payment" type="button">Cancelar</button>
+          <button class="primary-button" type="submit">Confirmar venda</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="payment-modal" id="sale-view-modal">
+      <section class="payment-box">
+        <header class="payment-header">
+          <div>
+            <h2>Detalhes da venda</h2>
+            <p id="sale-view-date"></p>
+          </div>
+          <button class="icon-button" id="close-sale-view" type="button" aria-label="Fechar">x</button>
+        </header>
+
+        <div class="sale-view-content" id="sale-view-content"></div>
+
+        <div class="form-actions">
+          <button class="ghost-button" id="close-sale-view-bottom" type="button">Fechar</button>
+          <button class="primary-button" id="print-viewed-sale" type="button">Imprimir</button>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog class="app-modal" id="app-modal">
+      <form class="app-modal-box" id="app-modal-form">
+        <header class="app-modal-header">
+          <h2 id="app-modal-title">Aviso</h2>
+        </header>
+        <p id="app-modal-message"></p>
+        <label class="field hidden" id="app-modal-input-field">
+          <span id="app-modal-input-label">Valor</span>
+          <input id="app-modal-input" />
+        </label>
+        <div class="form-actions app-modal-actions">
+          <button class="ghost-button hidden" id="app-modal-cancel" type="button">Cancelar</button>
+          <button class="primary-button" id="app-modal-ok" type="submit">OK</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
