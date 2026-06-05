@@ -1182,12 +1182,13 @@ function buildLayerButtons(){
     if(aNum) return -1;
     if(bNum) return 1;
     return a.localeCompare(b);
-  }).forEach(L=>{
+  }).forEach((L,index)=>{
     const row = document.createElement('div');
     row.className = visible[L]?'layer-btn layer-visible':'layer-btn layer-hidden';
     row.dataset.layer=L;
-    row.title = L === 'Top' ? 'Layer Top sempre ativa' : `Layer ${L}`;
-    const name = document.createElement('div'); name.className='layer-name'; name.textContent=L;
+    const displayIndex = index + 1;
+    row.title = L === 'Top' ? `Layer ${displayIndex} (Top sempre ativa)` : `Layer ${displayIndex}`;
+    const name = document.createElement('div'); name.className='layer-name'; name.textContent = String(displayIndex);
     const isLocked = L === 'Top';
     row.appendChild(name);
     row.style.background = layerColor[L] || '#eef4ff';
