@@ -1,5 +1,5 @@
 ﻿const STORAGE_KEY = "caixa-pdv-v1";
-const ADMIN_PASSWORD = "2580";
+const MASTER_PASSWORD = "1950";
 const CODE39_PATTERNS = {
   "0": "nnnwwnwnn",
   "1": "wnnwnnnnw",
@@ -26,12 +26,18 @@ let lastReceiptSaleId = null;
 let selectedSuggestionIndex = -1;
 let audioContext = null;
 let viewedSaleId = null;
+let currentFinanceDayKey = getLocalDateKey(new Date());
+let barcodeScanTimer = null;
 
 const els = {
   navButtons: document.querySelectorAll(".nav-button"),
   views: document.querySelectorAll(".view"),
   pdvStoreTitle: document.querySelector("#pdv-store-title"),
   pdvClock: document.querySelector("#pdv-clock"),
+  cashToggle: document.querySelector("#cash-toggle"),
+  cashSessionInfo: document.querySelector("#cash-session-info"),
+  dailyReportPdv: document.querySelector("#daily-report-pdv"),
+  openWithdrawal: document.querySelector("#open-withdrawal"),
   productForm: document.querySelector("#product-form"),
   productId: document.querySelector("#product-id"),
   productName: document.querySelector("#product-name"),
@@ -49,6 +55,7 @@ const els = {
   freeCashBanner: document.querySelector("#free-cash-banner"),
   stockAlertPanel: document.querySelector("#stock-alert-panel"),
   stockAlertList: document.querySelector("#stock-alert-list"),
+  showShortcuts: document.querySelector("#show-shortcuts"),
   saleQty: document.querySelector("#sale-qty"),
   addToCart: document.querySelector("#add-to-cart"),
   cartBody: document.querySelector("#cart-body"),
@@ -59,10 +66,17 @@ const els = {
   paymentForm: document.querySelector("#payment-form"),
   closePaymentModal: document.querySelector("#close-payment-modal"),
   cancelPayment: document.querySelector("#cancel-payment"),
+  confirmPayment: document.querySelector("#confirm-payment"),
   modalSaleTotal: document.querySelector("#modal-sale-total"),
   discountType: document.querySelector("#discount-type"),
   discountApplied: document.querySelector("#discount-applied"),
   paymentMethod: document.querySelector("#payment-method"),
+  splitPayment: document.querySelector("#split-payment"),
+  splitPaymentFields: document.querySelector("#split-payment-fields"),
+  secondPaymentMethod: document.querySelector("#second-payment-method"),
+  secondPaymentAmount: document.querySelector("#second-payment-amount"),
+  primaryPaymentLine: document.querySelector("#primary-payment-line"),
+  primaryPaymentAmount: document.querySelector("#primary-payment-amount"),
   amountPaidField: document.querySelector("#amount-paid-field"),
   amountPaid: document.querySelector("#amount-paid"),
   cartTotal: document.querySelector("#cart-total"),
@@ -72,11 +86,38 @@ const els = {
   pdvStatus: document.querySelector("#pdv-status"),
   saleFilter: document.querySelector("#sale-filter"),
   salesBody: document.querySelector("#sales-body"),
-  metricRevenue: document.querySelector("#metric-revenue"),
-  metricCost: document.querySelector("#metric-cost"),
-  metricProfit: document.querySelector("#metric-profit"),
-  metricTicket: document.querySelector("#metric-ticket"),
-  paymentSummary: document.querySelector("#payment-summary"),
+  serviceForm: document.querySelector("#service-form"),
+  serviceId: document.querySelector("#service-id"),
+  serviceAmount: document.querySelector("#service-amount"),
+  serviceDescription: document.querySelector("#service-description"),
+  serviceOs: document.querySelector("#service-os"),
+  servicePaymentMethod: document.querySelector("#service-payment-method"),
+  serviceSplitPayment: document.querySelector("#service-split-payment"),
+  serviceSplitPaymentFields: document.querySelector("#service-split-payment-fields"),
+  serviceSecondPaymentMethod: document.querySelector("#service-second-payment-method"),
+  serviceSecondPaymentAmount: document.querySelector("#service-second-payment-amount"),
+  servicePrimaryPaymentLine: document.querySelector("#service-primary-payment-line"),
+  servicePrimaryPaymentAmount: document.querySelector("#service-primary-payment-amount"),
+  saveServiceButton: document.querySelector("#save-service"),
+  cancelServiceEdit: document.querySelector("#cancel-service-edit"),
+  servicesBody: document.querySelector("#services-body"),
+  cashMetricRevenue: document.querySelector("#cash-metric-revenue"),
+  cashMetricCost: document.querySelector("#cash-metric-cost"),
+  cashMetricProfit: document.querySelector("#cash-metric-profit"),
+  cashMetricTicket: document.querySelector("#cash-metric-ticket"),
+  dayMetricRevenue: document.querySelector("#day-metric-revenue"),
+  dayMetricCost: document.querySelector("#day-metric-cost"),
+  dayMetricProfit: document.querySelector("#day-metric-profit"),
+  dayMetricTicket: document.querySelector("#day-metric-ticket"),
+  monthMetricRevenue: document.querySelector("#month-metric-revenue"),
+  monthMetricCost: document.querySelector("#month-metric-cost"),
+  monthMetricProfit: document.querySelector("#month-metric-profit"),
+  monthMetricTicket: document.querySelector("#month-metric-ticket"),
+  cashPaymentSummary: document.querySelector("#cash-payment-summary"),
+  dayPaymentSummary: document.querySelector("#day-payment-summary"),
+  monthPaymentSummary: document.querySelector("#month-payment-summary"),
+  dailyReport: document.querySelector("#daily-report"),
+  withdrawalHistory: document.querySelector("#withdrawal-history"),
   closeMonth: document.querySelector("#close-month"),
   closingsBody: document.querySelector("#closings-body"),
   storeForm: document.querySelector("#store-form"),
@@ -85,6 +126,7 @@ const els = {
   storeAddress: document.querySelector("#store-address"),
   storePhone: document.querySelector("#store-phone"),
   themeSelect: document.querySelector("#theme-select"),
+  adminPassword: document.querySelector("#admin-password"),
   exportData: document.querySelector("#export-data"),
   importData: document.querySelector("#import-data"),
   clearData: document.querySelector("#clear-data"),
@@ -94,6 +136,17 @@ const els = {
   saleViewDate: document.querySelector("#sale-view-date"),
   saleViewContent: document.querySelector("#sale-view-content"),
   printViewedSale: document.querySelector("#print-viewed-sale"),
+  withdrawalModal: document.querySelector("#withdrawal-modal"),
+  withdrawalForm: document.querySelector("#withdrawal-form"),
+  closeWithdrawalModal: document.querySelector("#close-withdrawal-modal"),
+  cancelWithdrawal: document.querySelector("#cancel-withdrawal"),
+  withdrawalAmount: document.querySelector("#withdrawal-amount"),
+  withdrawalMethod: document.querySelector("#withdrawal-method"),
+  withdrawalDescription: document.querySelector("#withdrawal-description"),
+  withdrawalHistoryModal: document.querySelector("#withdrawal-history-modal"),
+  withdrawalHistoryList: document.querySelector("#withdrawal-history-list"),
+  closeWithdrawalHistory: document.querySelector("#close-withdrawal-history"),
+  closeWithdrawalHistoryBottom: document.querySelector("#close-withdrawal-history-bottom"),
   appModal: document.querySelector("#app-modal"),
   appModalForm: document.querySelector("#app-modal-form"),
   appModalTitle: document.querySelector("#app-modal-title"),
@@ -105,6 +158,7 @@ const els = {
   appModalOk: document.querySelector("#app-modal-ok"),
 };
 
+bindMoneyInputs();
 bindEvents();
 renderAll();
 startClock();
@@ -113,8 +167,15 @@ function loadState() {
   const fallback = {
     products: [],
     sales: [],
+    services: [],
     monthlyClosings: [],
     financeAdjustments: {},
+    cashRegister: null,
+    cashSessions: [],
+    withdrawals: [],
+    security: {
+      password: "2580",
+    },
     store: {
       name: "Minha Loja",
       doc: "",
@@ -126,7 +187,14 @@ function loadState() {
 
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return stored ? { ...fallback, ...stored, store: { ...fallback.store, ...(stored.store || {}) } } : fallback;
+    return stored
+      ? {
+          ...fallback,
+          ...stored,
+          store: { ...fallback.store, ...(stored.store || {}) },
+          security: { ...fallback.security, ...(stored.security || {}) },
+        }
+      : fallback;
   } catch {
     return fallback;
   }
@@ -134,6 +202,45 @@ function loadState() {
 
 function saveState() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function bindMoneyInputs() {
+  [
+    els.productCost,
+    els.productPrice,
+    els.secondPaymentAmount,
+    els.amountPaid,
+    els.serviceAmount,
+    els.serviceSecondPaymentAmount,
+    els.withdrawalAmount,
+  ].forEach((input) => {
+    if (!input) return;
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.autocomplete = "off";
+    input.addEventListener("input", () => formatMoneyInput(input));
+    input.addEventListener("focus", () => input.select());
+    formatMoneyInput(input);
+  });
+}
+
+function formatMoneyInput(input) {
+  const digits = String(input.value || "").replace(/\D/g, "");
+  const amount = digits ? Number(digits) / 100 : 0;
+  input.value = formatMoneyValue(amount);
+}
+
+function setMoneyInput(input, value) {
+  if (!input) return;
+  input.value = formatMoneyValue(value);
+}
+
+function formatMoneyValue(value) {
+  const number = typeof value === "number" ? value : toNumber(value);
+  return number.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function bindEvents() {
@@ -151,6 +258,7 @@ function bindEvents() {
   els.saleSearch.addEventListener("input", () => {
     selectedSuggestionIndex = -1;
     renderSaleSuggestions();
+    scheduleBarcodeScanAdd();
   });
   els.saleSearch.addEventListener("paste", () => {
     setTimeout(addPastedBarcodeToCart, 0);
@@ -215,24 +323,43 @@ function bindEvents() {
     syncAmountPaidToTotal();
     renderPaymentModal();
   });
+  els.splitPayment.addEventListener("change", () => {
+    syncAmountPaidToTotal();
+    renderPaymentModal();
+  });
+  els.secondPaymentMethod.addEventListener("change", renderPaymentModal);
+  els.secondPaymentAmount.addEventListener("input", renderPaymentModal);
   els.amountPaid.addEventListener("input", renderPaymentModal);
+  els.cashToggle.addEventListener("click", toggleCashRegister);
+  els.dailyReportPdv.addEventListener("click", printDailyReport);
+  els.openWithdrawal.addEventListener("click", openWithdrawalModal);
+  els.showShortcuts.addEventListener("click", showShortcuts);
   els.finishSale.addEventListener("click", openPaymentModal);
   els.paymentForm.addEventListener("submit", finishSale);
   els.closePaymentModal.addEventListener("click", closePaymentModal);
   els.cancelPayment.addEventListener("click", closePaymentModal);
   els.clearCart.addEventListener("click", clearCart);
   els.closeMonth.addEventListener("click", closeMonth);
+  els.dailyReport.addEventListener("click", printDailyReport);
+  els.withdrawalHistory.addEventListener("click", openWithdrawalHistory);
   els.themeSelect.addEventListener("change", () => {
     state.store.theme = els.themeSelect.value;
     applyTheme(state.store.theme);
     saveState();
   });
-  els.paymentSummary.addEventListener("click", (event) => {
+  els.monthPaymentSummary.addEventListener("click", (event) => {
     const button = event.target.closest("[data-payment-method]");
     if (!button) return;
     editPaymentValue(button.dataset.paymentMethod);
   });
   els.saleFilter.addEventListener("input", renderSales);
+  els.serviceForm.addEventListener("submit", saveService);
+  els.serviceAmount.addEventListener("input", renderServicePaymentFields);
+  els.servicePaymentMethod.addEventListener("change", renderServicePaymentFields);
+  els.serviceSplitPayment.addEventListener("change", renderServicePaymentFields);
+  els.serviceSecondPaymentMethod.addEventListener("change", renderServicePaymentFields);
+  els.serviceSecondPaymentAmount.addEventListener("input", renderServicePaymentFields);
+  els.cancelServiceEdit.addEventListener("click", resetServiceForm);
   els.storeForm.addEventListener("submit", saveStore);
   els.exportData.addEventListener("click", exportData);
   els.importData.addEventListener("change", importData);
@@ -243,6 +370,16 @@ function bindEvents() {
     if (viewedSaleId) {
       printReceipt(viewedSaleId);
     }
+  });
+  els.withdrawalForm.addEventListener("submit", saveWithdrawal);
+  els.closeWithdrawalModal.addEventListener("click", closeWithdrawalModal);
+  els.cancelWithdrawal.addEventListener("click", closeWithdrawalModal);
+  els.closeWithdrawalHistory.addEventListener("click", closeWithdrawalHistory);
+  els.closeWithdrawalHistoryBottom.addEventListener("click", closeWithdrawalHistory);
+  els.withdrawalHistoryList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-withdrawal-id]");
+    if (!button) return;
+    printWithdrawal(button.dataset.withdrawalId);
   });
 }
 
@@ -288,9 +425,123 @@ async function handleGlobalShortcuts(event) {
 
 async function startSale() {
   await switchView("pdv");
+  if (!isCashRegisterOpen()) {
+    await showAlert("Abra o caixa antes de iniciar vendas.");
+    return;
+  }
   closePaymentModal();
   els.saleSearch.focus();
   updatePdvStatus();
+}
+
+function isCashRegisterOpen() {
+  return Boolean(state.cashRegister?.isOpen);
+}
+
+async function toggleCashRegister() {
+  if (isCashRegisterOpen()) {
+    await closeCashRegister();
+    return;
+  }
+
+  await openCashRegister();
+}
+
+async function openCashRegister() {
+  if (isCashRegisterOpen()) {
+    await showAlert("O caixa ja esta aberto.");
+    return;
+  }
+
+  const attendant = await showPrompt("Nome do atendente:", "", "Abrir caixa");
+  if (attendant === null) return;
+
+  const attendantName = attendant.trim();
+  if (!attendantName) {
+    await showAlert("Informe o nome do atendente.");
+    return;
+  }
+
+  state.cashRegister = {
+    id: createId(),
+    attendant: attendantName,
+    openedAt: new Date().toISOString(),
+    isOpen: true,
+  };
+
+  saveState();
+  renderAll();
+  els.saleSearch.focus();
+  await showAlert("Caixa aberto.");
+}
+
+async function closeCashRegister() {
+  if (!isCashRegisterOpen()) {
+    await showAlert("O caixa ja esta fechado.");
+    return;
+  }
+
+  if (cart.length) {
+    await showAlert("Finalize ou limpe a venda em andamento antes de fechar o caixa.");
+    return;
+  }
+
+  if (!(await requirePassword("fechar o caixa"))) return;
+  if (!(await showConfirm("Fechar o caixa agora? Novas vendas ficarao bloqueadas ate abrir novamente."))) return;
+
+  const closedSession = {
+    ...state.cashRegister,
+    isOpen: false,
+    closedAt: new Date().toISOString(),
+  };
+  const sessionSales = state.sales.filter((sale) => sale.cashSessionId === closedSession.id);
+  const sessionServices = (state.services || []).filter((service) => service.cashSessionId === closedSession.id);
+  const sessionWithdrawals = (state.withdrawals || []).filter((withdrawal) => withdrawal.cashSessionId === closedSession.id);
+
+  state.cashSessions ||= [];
+  state.cashSessions.unshift(closedSession);
+  state.cashSessions = state.cashSessions.slice(0, 50);
+  state.cashRegister = null;
+
+  saveState();
+  renderAll();
+  printCashClosingReport(closedSession, sessionSales, sessionWithdrawals, sessionServices);
+  await showAlert("Caixa fechado.");
+}
+
+function renderCashRegister() {
+  const session = state.cashRegister;
+  const open = isCashRegisterOpen();
+
+  els.cashToggle.textContent = open ? "Fechar caixa" : "Abrir caixa";
+  els.cashToggle.classList.toggle("primary-button", !open);
+  els.cashToggle.classList.toggle("danger-button", open);
+  els.saleSearch.disabled = !open;
+  if (els.addToCart) els.addToCart.disabled = !open;
+  els.finishSale.disabled = !open;
+  els.openWithdrawal.disabled = !open;
+
+  if (open) {
+    els.cashSessionInfo.innerHTML = `
+      <strong>Caixa aberto</strong>
+      <span>Atendente: ${escapeHtml(session.attendant)}</span>
+      <span>Abertura: ${formatDate(session.openedAt)}</span>
+    `;
+    return;
+  }
+
+  els.cashSessionInfo.innerHTML = `
+    <strong>Caixa fechado</strong>
+    <span>Abra o caixa para registrar vendas.</span>
+  `;
+}
+
+function showShortcuts() {
+  showAppModal({
+    title: "Atalhos",
+    message: "F2 - Iniciar venda\nF3 - Limpar venda\nF10 - Finalizar / confirmar",
+    mode: "alert",
+  });
 }
 
 async function saveProduct(event) {
@@ -330,6 +581,8 @@ async function saveProduct(event) {
 function resetProductForm() {
   els.productForm.reset();
   els.productId.value = "";
+  setMoneyInput(els.productCost, 0);
+  setMoneyInput(els.productPrice, 0);
   els.productStock.value = "0";
   els.productMinStock.value = "3";
 }
@@ -343,8 +596,8 @@ async function editProduct(id) {
   els.productId.value = product.id;
   els.productName.value = product.name;
   els.productBarcode.value = product.barcode;
-  els.productCost.value = product.cost;
-  els.productPrice.value = product.price;
+  setMoneyInput(els.productCost, product.cost);
+  setMoneyInput(els.productPrice, product.price);
   els.productStock.value = product.stock;
   els.productMinStock.value = product.minStock ?? 3;
   switchView("produtos");
@@ -529,6 +782,11 @@ function renderLowStockAlerts() {
 }
 
 async function addCartItem() {
+  if (!isCashRegisterOpen()) {
+    await showAlert("Abra o caixa antes de vender.");
+    return;
+  }
+
   const query = normalize(els.saleSearch.value);
   const qty = 1;
 
@@ -548,7 +806,7 @@ async function addCartItem() {
 
   const currentQty = cart.find((item) => item.productId === product.id)?.qty || 0;
   if (product.stock < currentQty + qty) {
-    await showAlert(`Estoque insuficiente. Disponível: ${product.stock}`);
+    await showInsufficientStockAlert(product);
     return;
   }
 
@@ -574,6 +832,8 @@ async function addCartItem() {
 }
 
 async function addPastedBarcodeToCart() {
+  if (!isCashRegisterOpen()) return;
+
   const query = normalize(els.saleSearch.value);
   if (!query) return;
 
@@ -587,7 +847,26 @@ async function addPastedBarcodeToCart() {
   addCartItem();
 }
 
+function scheduleBarcodeScanAdd() {
+  clearTimeout(barcodeScanTimer);
+
+  barcodeScanTimer = setTimeout(() => {
+    if (!isCashRegisterOpen()) return;
+
+    const query = normalize(els.saleSearch.value);
+    if (!query) return;
+
+    const product = state.products.find((item) => normalize(item.barcode) === query);
+    if (!product) return;
+
+    els.saleSearch.value = product.barcode;
+    addCartItem();
+  }, 120);
+}
+
 function getSaleMatches() {
+  if (!isCashRegisterOpen()) return [];
+
   const query = normalize(els.saleSearch.value);
   if (!query) return [];
 
@@ -671,6 +950,15 @@ function selectSaleSuggestionById(productId) {
   addCartItem();
 }
 
+async function showInsufficientStockAlert(product) {
+  const action = await showActionAlert(`Estoque insuficiente. Disponível: ${product.stock}`, "Editar");
+  if (action !== "action") return;
+
+  await editProduct(product.id);
+  els.productStock.focus();
+  els.productStock.select();
+}
+
 async function removeCartItem(productId) {
   if (!(await requirePassword("remover este item"))) return;
 
@@ -685,7 +973,7 @@ async function updateCartQty(productId, value) {
 
   const qty = Math.max(1, Math.floor(toNumber(value) || 1));
   if (qty > product.stock) {
-    await showAlert(`Estoque insuficiente. Disponível: ${product.stock}`);
+    await showInsufficientStockAlert(product);
     item.qty = product.stock;
   } else {
     item.qty = qty;
@@ -714,11 +1002,24 @@ function cartTotals() {
 
 function paymentTotals() {
   const totals = cartTotals();
-  const isCash = els.paymentMethod.value === "Dinheiro";
+  const isSplit = els.splitPayment.checked;
+  const secondAmount = isSplit ? Math.min(totals.total, Math.max(0, toNumber(els.secondPaymentAmount.value))) : 0;
+  const primaryAmount = totals.total - secondAmount;
+  const payments = isSplit
+    ? [
+        { method: els.paymentMethod.value, amount: primaryAmount },
+        { method: els.secondPaymentMethod.value, amount: secondAmount },
+      ].filter((payment) => payment.amount > 0)
+    : [{ method: els.paymentMethod.value, amount: totals.total }];
+  const isCash = !isSplit && els.paymentMethod.value === "Dinheiro";
   const paid = isCash ? toNumber(els.amountPaid.value) : totals.total;
 
   return {
     ...totals,
+    isSplit,
+    primaryAmount,
+    secondAmount,
+    payments,
     paid,
     change: isCash ? Math.max(0, paid - totals.total) : 0,
   };
@@ -760,22 +1061,39 @@ function renderCart() {
 }
 
 function updatePdvStatus() {
+  if (!isCashRegisterOpen()) {
+    if (els.pdvStatus) {
+      els.pdvStatus.textContent = "Caixa fechado";
+      els.pdvStatus.className = "status-pill status-closed";
+    }
+    els.freeCashBanner.textContent = "CAIXA FECHADO";
+    els.freeCashBanner.classList.remove("hidden");
+    return;
+  }
+
   if (els.paymentModal.open) {
-    els.pdvStatus.textContent = "Finalizando venda";
-    els.pdvStatus.className = "status-pill status-finalizing";
+    if (els.pdvStatus) {
+      els.pdvStatus.textContent = "Finalizando venda";
+      els.pdvStatus.className = "status-pill status-finalizing";
+    }
     els.freeCashBanner.classList.add("hidden");
     return;
   }
 
   if (cart.length) {
-    els.pdvStatus.textContent = "Venda em andamento";
-    els.pdvStatus.className = "status-pill status-active";
+    if (els.pdvStatus) {
+      els.pdvStatus.textContent = "Venda em andamento";
+      els.pdvStatus.className = "status-pill status-active";
+    }
     els.freeCashBanner.classList.add("hidden");
     return;
   }
 
-  els.pdvStatus.textContent = "Caixa livre";
-  els.pdvStatus.className = "status-pill";
+  if (els.pdvStatus) {
+    els.pdvStatus.textContent = "Caixa livre";
+    els.pdvStatus.className = "status-pill";
+  }
+  els.freeCashBanner.textContent = "CAIXA LIVRE";
   els.freeCashBanner.classList.remove("hidden");
 }
 
@@ -783,12 +1101,21 @@ function clearCart() {
   cart = [];
   els.saleDiscount.value = "0";
   els.discountType.value = "value";
-  els.amountPaid.value = "0";
+  els.paymentMethod.value = "Pix";
+  els.splitPayment.checked = false;
+  els.secondPaymentMethod.value = "Crédito";
+  setMoneyInput(els.secondPaymentAmount, 0);
+  setMoneyInput(els.amountPaid, 0);
   closePaymentModal();
   renderCart();
 }
 
 async function validateSaleReady() {
+  if (!isCashRegisterOpen()) {
+    await showAlert("Abra o caixa antes de registrar vendas.");
+    return false;
+  }
+
   if (!cart.length) {
     await showAlert("Adicione produtos ao carrinho.");
     return false;
@@ -818,7 +1145,7 @@ async function openPaymentModal() {
   renderPaymentModal();
   els.paymentModal.showModal();
   updatePdvStatus();
-  els.paymentMethod.focus();
+  els.confirmPayment.focus();
 }
 
 function closePaymentModal() {
@@ -830,10 +1157,13 @@ function closePaymentModal() {
 
 function renderPaymentModal() {
   const totals = paymentTotals();
-  const isCash = els.paymentMethod.value === "Dinheiro";
+  const isCash = !totals.isSplit && els.paymentMethod.value === "Dinheiro";
 
   els.modalSaleTotal.textContent = money.format(totals.total);
   els.discountApplied.textContent = money.format(totals.discount);
+  els.splitPaymentFields.classList.toggle("hidden", !totals.isSplit);
+  els.primaryPaymentLine.classList.toggle("hidden", !totals.isSplit);
+  els.primaryPaymentAmount.textContent = money.format(totals.primaryAmount);
   els.amountPaidField.hidden = !isCash;
   els.amountPaidField.classList.toggle("hidden", !isCash);
   els.saleChange.textContent = money.format(totals.change);
@@ -842,8 +1172,8 @@ function renderPaymentModal() {
 function syncAmountPaidToTotal() {
   const totals = cartTotals();
 
-  if (els.paymentMethod.value === "Dinheiro") {
-    els.amountPaid.value = totals.total.toFixed(2);
+  if (!els.splitPayment.checked && els.paymentMethod.value === "Dinheiro") {
+    setMoneyInput(els.amountPaid, totals.total);
   }
 }
 
@@ -852,11 +1182,17 @@ async function finishSale(event) {
   if (!(await validateSaleReady())) return;
 
   const totals = paymentTotals();
-  const isCash = els.paymentMethod.value === "Dinheiro";
+  const isCash = !totals.isSplit && els.paymentMethod.value === "Dinheiro";
 
   if (isCash && totals.paid < totals.total) {
     await showAlert("O valor pago em dinheiro não pode ser menor que o total da venda.");
     els.amountPaid.focus();
+    return;
+  }
+
+  if (totals.isSplit && toNumber(els.secondPaymentAmount.value) > totals.total) {
+    await showAlert("O valor da segunda forma não pode ser maior que o total da venda.");
+    els.secondPaymentAmount.focus();
     return;
   }
 
@@ -869,7 +1205,8 @@ async function finishSale(event) {
     id: createId(),
     createdAt: new Date().toISOString(),
     items: cart.map((item) => ({ ...item })),
-    paymentMethod: els.paymentMethod.value,
+    paymentMethod: totals.payments.map((payment) => payment.method).join(" + "),
+    payments: totals.payments,
     subtotal: totals.subtotal,
     discount: totals.discount,
     total: totals.total,
@@ -877,6 +1214,8 @@ async function finishSale(event) {
     profit: totals.total - totals.cost,
     paid: totals.paid,
     change: totals.change,
+    cashSessionId: state.cashRegister.id,
+    attendant: state.cashRegister.attendant,
   };
 
   state.sales.unshift(sale);
@@ -916,6 +1255,157 @@ function renderSales() {
     : `<tr><td class="empty-row" colspan="6">Nenhuma venda registrada.</td></tr>`;
 }
 
+async function saveService(event) {
+  event.preventDefault();
+
+  const editingId = els.serviceId.value;
+  if (!editingId && !isCashRegisterOpen()) {
+    await showAlert("Abra o caixa antes de lançar serviço.");
+    return;
+  }
+
+  const amount = Math.max(0, toNumber(els.serviceAmount.value));
+  const description = els.serviceDescription.value.trim();
+
+  if (amount <= 0) {
+    await showAlert("Informe um valor de serviço maior que zero.");
+    els.serviceAmount.focus();
+    return;
+  }
+
+  if (!description) {
+    await showAlert("Informe a descrição do serviço.");
+    els.serviceDescription.focus();
+    return;
+  }
+
+  const payments = servicePaymentTotals(amount);
+  if (payments.isSplit && toNumber(els.serviceSecondPaymentAmount.value) > amount) {
+    await showAlert("O valor da segunda forma não pode ser maior que o valor do serviço.");
+    els.serviceSecondPaymentAmount.focus();
+    return;
+  }
+
+  const service = {
+    id: editingId || createId(),
+    createdAt: new Date().toISOString(),
+    amount,
+    description,
+    osNumber: els.serviceOs.value.trim(),
+    paymentMethod: payments.payments.map((payment) => payment.method).join(" + "),
+    payments: payments.payments,
+    cashSessionId: state.cashRegister?.id || null,
+    attendant: state.cashRegister?.attendant || "",
+  };
+
+  state.services ||= [];
+  if (editingId) {
+    const index = state.services.findIndex((entry) => entry.id === editingId);
+    if (index >= 0) {
+      service.createdAt = state.services[index].createdAt;
+      service.cashSessionId = state.services[index].cashSessionId;
+      service.attendant = state.services[index].attendant;
+      state.services[index] = service;
+    }
+  } else {
+    state.services.unshift(service);
+  }
+
+  saveState();
+  resetServiceForm();
+  renderServices();
+  renderFinance();
+  if (!editingId) {
+    printServiceReceipt(service.id);
+  } else {
+    await showAlert("Serviço atualizado.");
+  }
+}
+
+function servicePaymentTotals(total) {
+  const isSplit = els.serviceSplitPayment.checked;
+  const secondAmount = isSplit ? Math.min(total, Math.max(0, toNumber(els.serviceSecondPaymentAmount.value))) : 0;
+  const primaryAmount = total - secondAmount;
+  const payments = isSplit
+    ? [
+        { method: els.servicePaymentMethod.value, amount: primaryAmount },
+        { method: els.serviceSecondPaymentMethod.value, amount: secondAmount },
+      ].filter((payment) => payment.amount > 0)
+    : [{ method: els.servicePaymentMethod.value, amount: total }];
+
+  return { isSplit, primaryAmount, secondAmount, payments };
+}
+
+function renderServicePaymentFields() {
+  const total = Math.max(0, toNumber(els.serviceAmount.value));
+  const payments = servicePaymentTotals(total);
+  els.serviceSplitPaymentFields.classList.toggle("hidden", !payments.isSplit);
+  els.servicePrimaryPaymentLine.classList.toggle("hidden", !payments.isSplit);
+  els.servicePrimaryPaymentAmount.textContent = money.format(payments.primaryAmount);
+}
+
+function resetServiceForm() {
+  els.serviceForm.reset();
+  els.serviceId.value = "";
+  els.servicePaymentMethod.value = "Pix";
+  els.serviceSecondPaymentMethod.value = "Crédito";
+  setMoneyInput(els.serviceAmount, 0);
+  setMoneyInput(els.serviceSecondPaymentAmount, 0);
+  els.saveServiceButton.textContent = "Adicionar serviço";
+  els.cancelServiceEdit.classList.add("hidden");
+  renderServicePaymentFields();
+}
+
+async function editService(serviceId) {
+  if (!(await requirePassword("editar este serviço"))) return;
+
+  const service = (state.services || []).find((entry) => entry.id === serviceId);
+  if (!service) return;
+
+  const payments = getServicePayments(service);
+  const firstPayment = payments[0] || { method: "Pix", amount: service.amount };
+  const secondPayment = payments[1] || { method: "Crédito", amount: 0 };
+
+  els.serviceId.value = service.id;
+  setMoneyInput(els.serviceAmount, service.amount);
+  els.serviceDescription.value = service.description;
+  els.serviceOs.value = service.osNumber || "";
+  els.servicePaymentMethod.value = firstPayment.method;
+  els.serviceSplitPayment.checked = payments.length > 1;
+  els.serviceSecondPaymentMethod.value = secondPayment.method;
+  setMoneyInput(els.serviceSecondPaymentAmount, payments.length > 1 ? secondPayment.amount : 0);
+  els.saveServiceButton.textContent = "Salvar serviço";
+  els.cancelServiceEdit.classList.remove("hidden");
+  renderServicePaymentFields();
+  switchView("servicos");
+  els.serviceAmount.focus();
+}
+
+function renderServices() {
+  const services = state.services || [];
+  els.servicesBody.innerHTML = services.length
+    ? services
+        .map(
+          (service) => `
+            <tr>
+              <td>${formatDate(service.createdAt)}</td>
+              <td>${escapeHtml(service.description)}<br><span class="muted">${escapeHtml(service.attendant || "")}</span></td>
+              <td>${service.osNumber ? escapeHtml(service.osNumber) : "-"}</td>
+              <td>${escapeHtml(service.paymentMethod)}</td>
+              <td>${money.format(service.amount)}</td>
+              <td>
+                <div class="button-row">
+                  <button class="small-button" type="button" onclick="editService('${service.id}')">Editar</button>
+                  <button class="small-button" type="button" onclick="printServiceReceipt('${service.id}')">Imprimir</button>
+                </div>
+              </td>
+            </tr>
+          `,
+        )
+        .join("")
+    : `<tr><td class="empty-row" colspan="6">Nenhum serviço registrado.</td></tr>`;
+}
+
 async function deleteSale(saleId) {
   if (!(await requirePassword("excluir esta venda"))) return;
 
@@ -939,6 +1429,7 @@ async function deleteSale(saleId) {
 function viewSale(saleId) {
   const sale = state.sales.find((entry) => entry.id === saleId);
   if (!sale) return;
+  const payments = getSalePayments(sale);
 
   viewedSaleId = sale.id;
   els.saleViewDate.textContent = formatDate(sale.createdAt);
@@ -963,6 +1454,13 @@ function viewSale(saleId) {
       <div class="summary-line"><span>Subtotal</span><strong>${money.format(sale.subtotal)}</strong></div>
       <div class="summary-line"><span>Desconto</span><strong>${money.format(sale.discount)}</strong></div>
       <div class="summary-line"><span>Pagamento</span><strong>${escapeHtml(sale.paymentMethod)}</strong></div>
+      ${payments
+        .map(
+          (payment) => `
+            <div class="summary-line"><span>${escapeHtml(payment.method)}</span><strong>${money.format(payment.amount)}</strong></div>
+          `,
+        )
+        .join("")}
       <div class="summary-line"><span>Recebido</span><strong>${money.format(sale.paid)}</strong></div>
       <div class="summary-line"><span>Troco</span><strong>${money.format(sale.change)}</strong></div>
       <div class="payment-total"><span>Total</span><strong>${money.format(sale.total)}</strong></div>
@@ -978,58 +1476,431 @@ function closeSaleView() {
   }
 }
 
+async function openWithdrawalModal() {
+  if (!isCashRegisterOpen()) {
+    await showAlert("Abra o caixa antes de registrar sangria.");
+    return;
+  }
+
+  els.withdrawalForm.reset();
+  setMoneyInput(els.withdrawalAmount, 0);
+  els.withdrawalMethod.value = "Dinheiro";
+  els.withdrawalModal.showModal();
+  els.withdrawalAmount.focus();
+  els.withdrawalAmount.select();
+}
+
+function closeWithdrawalModal() {
+  if (els.withdrawalModal.open) {
+    els.withdrawalModal.close();
+  }
+}
+
+async function saveWithdrawal(event) {
+  event.preventDefault();
+
+  if (!isCashRegisterOpen()) {
+    await showAlert("Abra o caixa antes de registrar sangria.");
+    closeWithdrawalModal();
+    return;
+  }
+
+  const amount = Math.max(0, toNumber(els.withdrawalAmount.value));
+  const description = els.withdrawalDescription.value.trim();
+
+  if (amount <= 0) {
+    await showAlert("Informe um valor de sangria maior que zero.");
+    els.withdrawalAmount.focus();
+    return;
+  }
+
+  if (!description) {
+    await showAlert("Informe a descrição da sangria.");
+    els.withdrawalDescription.focus();
+    return;
+  }
+
+  const withdrawal = {
+    id: createId(),
+    createdAt: new Date().toISOString(),
+    amount,
+    method: els.withdrawalMethod.value,
+    description,
+    attendant: state.cashRegister.attendant,
+    cashSessionId: state.cashRegister.id,
+  };
+
+  state.withdrawals ||= [];
+  state.withdrawals.unshift(withdrawal);
+  saveState();
+  closeWithdrawalModal();
+  renderFinance();
+  printWithdrawal(withdrawal.id);
+}
+
+function openWithdrawalHistory() {
+  renderWithdrawalHistory();
+  els.withdrawalHistoryModal.showModal();
+}
+
+function closeWithdrawalHistory() {
+  if (els.withdrawalHistoryModal.open) {
+    els.withdrawalHistoryModal.close();
+  }
+}
+
+function renderWithdrawalHistory() {
+  const withdrawals = state.withdrawals || [];
+  els.withdrawalHistoryList.innerHTML = withdrawals.length
+    ? withdrawals
+        .map(
+          (withdrawal) => `
+            <div class="sale-view-item">
+              <span>
+                <strong>${formatDate(withdrawal.createdAt)} - ${escapeHtml(withdrawal.method)}</strong>
+                <small>${escapeHtml(withdrawal.description)}</small>
+                <small>${escapeHtml(withdrawal.attendant || "Sem operador")}</small>
+              </span>
+              <span class="withdrawal-history-value">
+                <strong>${money.format(withdrawal.amount)}</strong>
+                <button class="small-button" type="button" data-withdrawal-id="${withdrawal.id}">Reimprimir</button>
+              </span>
+            </div>
+          `,
+        )
+        .join("")
+    : `<div class="sale-view-item"><span class="muted">Nenhuma sangria registrada.</span></div>`;
+}
+
+function getSalePayments(sale) {
+  if (Array.isArray(sale.payments) && sale.payments.length) {
+    return sale.payments;
+  }
+
+  return [{ method: sale.paymentMethod, amount: sale.total }];
+}
+
+function getServicePayments(service) {
+  if (Array.isArray(service.payments) && service.payments.length) {
+    return service.payments;
+  }
+
+  return [{ method: service.paymentMethod, amount: service.amount }];
+}
+
 function renderFinance() {
-  const finance = getFinanceTotals();
+  const cashFinance = getFinanceTotals(getCurrentCashSales(), false, getCurrentCashWithdrawals(), getCurrentCashServices());
+  const dayFinance = getFinanceTotals(getTodaySales(), false, getTodayWithdrawals(), getTodayServices());
+  const monthFinance = getFinanceTotals(getMonthSales(), true, getMonthWithdrawals(), getMonthServices());
 
-  els.metricRevenue.textContent = money.format(finance.revenue);
-  els.metricCost.textContent = money.format(finance.cost);
-  els.metricProfit.textContent = money.format(finance.profit);
-  els.metricTicket.textContent = money.format(finance.ticket);
+  renderFinanceScope("cash", cashFinance, false);
+  renderFinanceScope("day", dayFinance, false);
+  renderFinanceScope("month", monthFinance, true);
 
-  const entries = Object.entries(finance.byPayment);
-  els.paymentSummary.innerHTML = entries.length
+  renderClosings();
+}
+
+function renderFinanceScope(scope, finance, editable) {
+  els[`${scope}MetricRevenue`].textContent = money.format(finance.revenue);
+  els[`${scope}MetricCost`].textContent = money.format(finance.cost);
+  els[`${scope}MetricProfit`].textContent = money.format(finance.profit);
+  els[`${scope}MetricTicket`].textContent = money.format(finance.ticket);
+
+  els[`${scope}PaymentSummary`].innerHTML = paymentSummaryHtml(finance.byPayment, editable);
+}
+
+function paymentSummaryHtml(byPayment, editable = false) {
+  const entries = Object.entries(byPayment);
+  return entries.length
     ? entries
         .map(
           ([method, total]) => `
             <div class="payment-item">
               <span>${escapeHtml(method)}</span>
-              <button class="payment-value" type="button" data-payment-method="${escapeHtml(method)}">${money.format(total)}</button>
+              ${
+                editable
+                  ? `<button class="payment-value" type="button" data-payment-method="${escapeHtml(method)}">${money.format(total)}</button>`
+                  : `<strong class="payment-value readonly">${money.format(total)}</strong>`
+              }
             </div>
           `,
         )
         .join("")
     : `<p class="muted">Sem vendas para resumir.</p>`;
-
-  renderClosings();
 }
 
-function getFinanceTotals() {
-  const cost = state.sales.reduce((sum, sale) => sum + sale.cost, 0);
-  const byPayment = state.sales.reduce((acc, sale) => {
-    acc[sale.paymentMethod] = (acc[sale.paymentMethod] || 0) + sale.total;
+function getFinanceTotals(sales = state.sales, includeAdjustments = true, withdrawals = [], services = []) {
+  const finance = getSalesTotals(sales);
+  applyServicesToFinance(finance, services);
+
+  applyWithdrawalsToFinance(finance, withdrawals);
+
+  if (!includeAdjustments) {
+    return finance;
+  }
+
+  state.financeAdjustments ||= {};
+  Object.entries(state.financeAdjustments).forEach(([method, adjustment]) => {
+    finance.byPayment[method] = (finance.byPayment[method] || 0) + adjustment;
+  });
+
+  finance.revenue = Object.values(finance.byPayment).reduce((sum, total) => sum + total, 0);
+  finance.profit = finance.revenue - finance.cost;
+  finance.ticket = sales.length ? finance.revenue / sales.length : 0;
+
+  return finance;
+}
+
+function applyServicesToFinance(finance, services) {
+  services.forEach((service) => {
+    getServicePayments(service).forEach((payment) => {
+      finance.byPayment[payment.method] = (finance.byPayment[payment.method] || 0) + payment.amount;
+    });
+    finance.revenue += service.amount;
+  });
+
+  finance.salesCount = (finance.salesCount || 0) + services.length;
+  finance.profit = finance.revenue - finance.cost;
+  finance.ticket = finance.salesCount ? finance.revenue / finance.salesCount : 0;
+}
+
+function applyWithdrawalsToFinance(finance, withdrawals) {
+  withdrawals.forEach((withdrawal) => {
+    finance.byPayment[withdrawal.method] = (finance.byPayment[withdrawal.method] || 0) - withdrawal.amount;
+  });
+
+  finance.revenue = Object.values(finance.byPayment).reduce((sum, total) => sum + total, 0);
+  finance.profit = finance.revenue - finance.cost;
+}
+
+function getSalesTotals(sales) {
+  const byPayment = {};
+  PAYMENT_METHODS.forEach((method) => {
+    byPayment[method] = 0;
+  });
+
+  const totals = sales.reduce(
+    (acc, sale) => {
+      acc.revenue += sale.total;
+      acc.cost += sale.cost;
+      acc.items += sale.items.reduce((sum, item) => sum + item.qty, 0);
+      getSalePayments(sale).forEach((payment) => {
+        byPayment[payment.method] = (byPayment[payment.method] || 0) + payment.amount;
+      });
+      return acc;
+    },
+    { revenue: 0, cost: 0, items: 0 },
+  );
+
+  return {
+    ...totals,
+    salesCount: sales.length,
+    profit: totals.revenue - totals.cost,
+    ticket: sales.length ? totals.revenue / sales.length : 0,
+    byPayment,
+  };
+}
+
+function getTodaySales() {
+  const today = new Date();
+  return state.sales.filter((sale) => isSameLocalDay(sale.createdAt, today));
+}
+
+function getCurrentCashSales() {
+  if (!isCashRegisterOpen()) return [];
+  return state.sales.filter((sale) => sale.cashSessionId === state.cashRegister.id);
+}
+
+function getCurrentCashWithdrawals() {
+  if (!isCashRegisterOpen()) return [];
+  return (state.withdrawals || []).filter((withdrawal) => withdrawal.cashSessionId === state.cashRegister.id);
+}
+
+function getCurrentCashServices() {
+  if (!isCashRegisterOpen()) return [];
+  return (state.services || []).filter((service) => service.cashSessionId === state.cashRegister.id);
+}
+
+function getMonthSales() {
+  const today = new Date();
+  return state.sales.filter((sale) => isSameLocalMonth(sale.createdAt, today));
+}
+
+function getTodayWithdrawals() {
+  const today = new Date();
+  return (state.withdrawals || []).filter((withdrawal) => isSameLocalDay(withdrawal.createdAt, today));
+}
+
+function getTodayServices() {
+  const today = new Date();
+  return (state.services || []).filter((service) => isSameLocalDay(service.createdAt, today));
+}
+
+function getMonthWithdrawals() {
+  const today = new Date();
+  return (state.withdrawals || []).filter((withdrawal) => isSameLocalMonth(withdrawal.createdAt, today));
+}
+
+function getMonthServices() {
+  const today = new Date();
+  return (state.services || []).filter((service) => isSameLocalMonth(service.createdAt, today));
+}
+
+function getOperatorSalesSummary(sales) {
+  const summary = sales.reduce((acc, sale) => {
+    const operator = sale.attendant || "Sem operador";
+    acc[operator] = (acc[operator] || 0) + 1;
     return acc;
   }, {});
 
-  state.financeAdjustments ||= {};
-  PAYMENT_METHODS.forEach((method) => {
-    byPayment[method] ||= 0;
-  });
+  return Object.entries(summary).sort(([firstName], [secondName]) => firstName.localeCompare(secondName, "pt-BR"));
+}
 
-  Object.entries(state.financeAdjustments).forEach(([method, adjustment]) => {
-    byPayment[method] = (byPayment[method] || 0) + adjustment;
-  });
+function isSameLocalDay(value, date) {
+  const candidate = new Date(value);
+  return (
+    candidate.getFullYear() === date.getFullYear() &&
+    candidate.getMonth() === date.getMonth() &&
+    candidate.getDate() === date.getDate()
+  );
+}
 
-  const revenue = Object.values(byPayment).reduce((sum, total) => sum + total, 0);
-  const profit = revenue - cost;
-  const ticket = state.sales.length ? revenue / state.sales.length : 0;
+function isSameLocalMonth(value, date) {
+  const candidate = new Date(value);
+  return candidate.getFullYear() === date.getFullYear() && candidate.getMonth() === date.getMonth();
+}
 
-  return { revenue, cost, profit, ticket, byPayment };
+function getLocalDateKey(value) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function printDailyReport() {
+  document.querySelector(".label-print")?.remove();
+  document.querySelector(".receipt-print")?.remove();
+
+  const report = document.createElement("div");
+  report.className = "receipt-print";
+  report.innerHTML = dailyReportHtml();
+  document.body.appendChild(report);
+  window.print();
+  setTimeout(() => report.remove(), 500);
+}
+
+function printCashClosingReport(session, sales, withdrawals, services = []) {
+  document.querySelector(".label-print")?.remove();
+  document.querySelector(".receipt-print")?.remove();
+
+  const report = document.createElement("div");
+  report.className = "receipt-print";
+  report.innerHTML = cashClosingReportHtml(session, sales, withdrawals, services);
+  document.body.appendChild(report);
+  window.print();
+  setTimeout(() => report.remove(), 500);
+}
+
+function cashClosingReportHtml(session, sales, withdrawals, services = []) {
+  const totals = getFinanceTotals(sales, false, withdrawals, services);
+  const store = state.store;
+  const line = "-".repeat(23);
+  const items = sales.reduce((sum, sale) => sum + sale.items.reduce((itemSum, item) => itemSum + item.qty, 0), 0);
+  const withdrawalTotal = withdrawals.reduce((sum, withdrawal) => sum + withdrawal.amount, 0);
+
+  return `
+    <div style="text-align:center">
+      <strong>${escapeHtml(store.name || "Minha Loja")}</strong><br>
+      ${store.doc ? `${escapeHtml(store.doc)}<br>` : ""}
+      <strong>RELATORIO DO CAIXA</strong>
+    </div>
+    <div>${line}</div>
+    <div>Operador: ${escapeHtml(session.attendant || "Sem operador")}</div>
+    <div>Abertura: ${formatDate(session.openedAt)}</div>
+    <div>Fechamento: ${formatDate(session.closedAt)}</div>
+    <div>${line}</div>
+    <div>Vendas: ${sales.length}</div>
+    <div>Serviços: ${services.length}</div>
+    <div>Itens vendidos: ${items}</div>
+    <div>Sangrias: ${withdrawals.length}</div>
+    <div>Total sangria: ${money.format(withdrawalTotal)}</div>
+    <div>${line}</div>
+    <div>Faturamento: ${money.format(totals.revenue)}</div>
+    <div>${line}</div>
+    ${Object.entries(totals.byPayment)
+      .map(([method, total]) => `<div>${escapeHtml(method)}: ${money.format(total)}</div>`)
+      .join("")}
+    <div>${line}</div>
+    <div style="text-align:center">Fechamento de caixa</div>
+  `;
+}
+
+function dailyReportHtml() {
+  const sales = getTodaySales();
+  const services = getTodayServices();
+  const withdrawals = getTodayWithdrawals();
+  const totals = getFinanceTotals(sales, false, withdrawals, services);
+  const operatorSummary = getOperatorSalesSummary(sales);
+  const store = state.store;
+  const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(new Date());
+  const line = "-".repeat(23);
+  const currentSession = state.cashRegister;
+
+  return `
+    <div style="text-align:center">
+      <strong>${escapeHtml(store.name || "Minha Loja")}</strong><br>
+      ${store.doc ? `${escapeHtml(store.doc)}<br>` : ""}
+      <strong>RELATORIO DO DIA</strong><br>
+      <span>${date}</span>
+    </div>
+    <div>${line}</div>
+    <div>Emitido: ${formatDate(new Date().toISOString())}</div>
+    <div>Status: ${isCashRegisterOpen() ? "Caixa aberto" : "Caixa fechado"}</div>
+    ${
+      currentSession
+        ? `<div>Atendente: ${escapeHtml(currentSession.attendant)}</div><div>Abertura: ${formatDate(currentSession.openedAt)}</div>`
+        : ""
+    }
+    <div>${line}</div>
+    <div>Vendas: ${sales.length}</div>
+    <div>Serviços: ${services.length}</div>
+    <div>Itens vendidos: ${totals.items}</div>
+    <div>Faturamento: ${money.format(totals.revenue)}</div>
+    <div>${line}</div>
+    ${Object.entries(totals.byPayment)
+      .map(([method, total]) => `<div>${escapeHtml(method)}: ${money.format(total)}</div>`)
+      .join("")}
+    <div>${line}</div>
+    <div>Sangrias: ${withdrawals.length}</div>
+    ${withdrawals.length ? `<div>Total sangria: ${money.format(withdrawals.reduce((sum, withdrawal) => sum + withdrawal.amount, 0))}</div>` : ""}
+    <div>${line}</div>
+    ${
+      operatorSummary.length
+        ? operatorSummary
+            .map(
+              ([operator, count]) => `
+                <div>Operador: ${escapeHtml(operator)}</div>
+                <div>Quantidade de vendas: ${count}</div>
+              `,
+            )
+            .join(`<div>${line}</div>`)
+        : "<div>Nenhuma venda registrada hoje.</div>"
+    }
+  `;
 }
 
 function getPaymentBaseTotal(method) {
-  return state.sales
-    .filter((sale) => sale.paymentMethod === method)
-    .reduce((sum, sale) => sum + sale.total, 0);
+  const salesTotal = getMonthSales()
+    .reduce(
+      (sum, sale) =>
+        sum + getSalePayments(sale).filter((payment) => payment.method === method).reduce((total, payment) => total + payment.amount, 0),
+      0,
+    );
+  const servicesTotal = getMonthServices()
+    .reduce(
+      (sum, service) =>
+        sum + getServicePayments(service).filter((payment) => payment.method === method).reduce((total, payment) => total + payment.amount, 0),
+      0,
+    );
+  return salesTotal + servicesTotal;
 }
 
 async function editPaymentValue(method) {
@@ -1124,6 +1995,8 @@ function viewClosing(closingId) {
 
 async function saveStore(event) {
   event.preventDefault();
+  const newPassword = els.adminPassword.value.trim();
+
   state.store = {
     name: els.storeName.value.trim(),
     doc: els.storeDoc.value.trim(),
@@ -1131,8 +2004,15 @@ async function saveStore(event) {
     phone: els.storePhone.value.trim(),
     theme: els.themeSelect.value,
   };
+
+  state.security ||= {};
+  if (newPassword) {
+    state.security.password = newPassword;
+  }
+
   applyTheme(state.store.theme);
   saveState();
+  els.adminPassword.value = "";
   await showAlert("Configuração salva.");
 }
 
@@ -1142,6 +2022,7 @@ function renderStore() {
   els.storeAddress.value = state.store.address || "";
   els.storePhone.value = state.store.phone || "";
   els.themeSelect.value = state.store.theme || "default";
+  els.adminPassword.value = "";
   applyTheme(els.themeSelect.value);
   els.pdvStoreTitle.textContent = (state.store.name || "Minha Loja").toUpperCase();
 }
@@ -1164,9 +2045,38 @@ function printReceipt(saleId = lastReceiptSaleId) {
   setTimeout(() => receipt.remove(), 500);
 }
 
+function printWithdrawal(withdrawalId) {
+  const withdrawal = (state.withdrawals || []).find((entry) => entry.id === withdrawalId);
+  if (!withdrawal) return;
+
+  document.querySelector(".label-print")?.remove();
+  document.querySelector(".receipt-print")?.remove();
+  const receipt = document.createElement("div");
+  receipt.className = "receipt-print";
+  receipt.innerHTML = withdrawalReceiptHtml(withdrawal);
+  document.body.appendChild(receipt);
+  window.print();
+  setTimeout(() => receipt.remove(), 500);
+}
+
+function printServiceReceipt(serviceId) {
+  const service = (state.services || []).find((entry) => entry.id === serviceId);
+  if (!service) return;
+
+  document.querySelector(".label-print")?.remove();
+  document.querySelector(".receipt-print")?.remove();
+  const receipt = document.createElement("div");
+  receipt.className = "receipt-print";
+  receipt.innerHTML = serviceReceiptHtml(service);
+  document.body.appendChild(receipt);
+  window.print();
+  setTimeout(() => receipt.remove(), 500);
+}
+
 function receiptHtml(sale) {
   const store = state.store;
-  const line = "-".repeat(32);
+  const line = "-".repeat(23);
+  const payments = getSalePayments(sale);
   const items = sale.items
     .map((item) => {
       const name = escapeHtml(item.name).slice(0, 28);
@@ -1187,6 +2097,7 @@ function receiptHtml(sale) {
     <div>${line}</div>
     <div>Venda: ${sale.id.slice(0, 8)}</div>
     <div>Data: ${formatDate(sale.createdAt)}</div>
+    ${sale.attendant ? `<div>Atendente: ${escapeHtml(sale.attendant)}</div>` : ""}
     <div>${line}</div>
     ${items}
     <div>${line}</div>
@@ -1194,6 +2105,7 @@ function receiptHtml(sale) {
     <div>Desconto: ${money.format(sale.discount)}</div>
     <div><strong>Total: ${money.format(sale.total)}</strong></div>
     <div>Pagamento: ${escapeHtml(sale.paymentMethod)}</div>
+    ${payments.map((payment) => `<div>${escapeHtml(payment.method)}: ${money.format(payment.amount)}</div>`).join("")}
     <div>Recebido: ${money.format(sale.paid)}</div>
     <div>Troco: ${money.format(sale.change)}</div>
     <div>${line}</div>
@@ -1201,20 +2113,85 @@ function receiptHtml(sale) {
   `;
 }
 
+function serviceReceiptHtml(service) {
+  const store = state.store;
+  const line = "-".repeat(23);
+  const payments = getServicePayments(service);
+
+  return `
+    <div style="text-align:center">
+      <strong>${escapeHtml(store.name || "Minha Loja")}</strong><br>
+      ${store.doc ? `${escapeHtml(store.doc)}<br>` : ""}
+      ${store.address ? `${escapeHtml(store.address)}<br>` : ""}
+      ${store.phone ? `${escapeHtml(store.phone)}<br>` : ""}
+      <strong>COMPROVANTE DE SERVICO</strong>
+    </div>
+    <div>${line}</div>
+    <div>Servico: ${service.id.slice(0, 8)}</div>
+    <div>Data: ${formatDate(service.createdAt)}</div>
+    <div>Atendente: ${escapeHtml(service.attendant || "Sem operador")}</div>
+    ${service.osNumber ? `<div>OS: ${escapeHtml(service.osNumber)}</div>` : ""}
+    <div>${line}</div>
+    <div>${escapeHtml(service.description)}</div>
+    <div><strong>Total: ${money.format(service.amount)}</strong></div>
+    <div>Pagamento: ${escapeHtml(service.paymentMethod)}</div>
+    ${payments.map((payment) => `<div>${escapeHtml(payment.method)}: ${money.format(payment.amount)}</div>`).join("")}
+    <div>${line}</div>
+    <div style="text-align:center">Obrigado pela preferência</div>
+  `;
+}
+
+function withdrawalReceiptHtml(withdrawal) {
+  const store = state.store;
+  const line = "-".repeat(23);
+
+  return `
+    <div style="text-align:center">
+      <strong>${escapeHtml(store.name || "Minha Loja")}</strong><br>
+      <strong>COMPROVANTE DE SANGRIA</strong>
+    </div>
+    <div>${line}</div>
+    <div>Sangria: ${withdrawal.id.slice(0, 8)}</div>
+    <div>Data: ${formatDate(withdrawal.createdAt)}</div>
+    <div>Operador: ${escapeHtml(withdrawal.attendant || "Sem operador")}</div>
+    <div>${line}</div>
+    <div>Tipo: ${escapeHtml(withdrawal.method)}</div>
+    <div><strong>Valor: ${money.format(withdrawal.amount)}</strong></div>
+    <div>Motivo: ${escapeHtml(withdrawal.description)}</div>
+    <div>${line}</div>
+    <div style="text-align:center">Assinatura</div>
+    <br>
+    <div>${line}</div>
+  `;
+}
+
 function exportData() {
-  const backup = {
+  downloadBackup(buildBackup(), `backup-caixa-pdv-${new Date().toISOString().slice(0, 10)}.json`);
+}
+
+function buildBackup(extra = {}) {
+  return {
     ...state,
+    ...extra,
+    backupVersion: 3,
     exportedAt: new Date().toISOString(),
     selectedTheme: state.store.theme || "default",
-    currentFinance: getFinanceTotals(),
+    currentFinance: getFinanceTotals(getMonthSales(), true, getMonthWithdrawals(), getMonthServices()),
     monthlyClosings: state.monthlyClosings || [],
     financeAdjustments: state.financeAdjustments || {},
+    cashRegister: state.cashRegister || null,
+    cashSessions: state.cashSessions || [],
+    withdrawals: state.withdrawals || [],
+    services: state.services || [],
   };
+}
+
+function downloadBackup(backup, filename) {
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `backup-caixa-pdv-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -1227,14 +2204,49 @@ function importData(event) {
   reader.onload = async () => {
     try {
       const imported = JSON.parse(reader.result);
-      if (!Array.isArray(imported.products) || !Array.isArray(imported.sales)) {
+      const backupState = imported.fullState && typeof imported.fullState === "object" ? imported.fullState : imported;
+
+      if (!Array.isArray(backupState.products) || !Array.isArray(backupState.sales)) {
         throw new Error("Formato inválido");
       }
-      state.products = imported.products;
-      state.sales = imported.sales;
-      state.monthlyClosings = Array.isArray(imported.monthlyClosings) ? imported.monthlyClosings : [];
-      state.financeAdjustments = imported.financeAdjustments || {};
-      state.store = imported.store || state.store;
+
+      Object.keys(state).forEach((key) => {
+        delete state[key];
+      });
+
+      Object.assign(state, {
+        products: Array.isArray(backupState.products) ? backupState.products : [],
+        sales: Array.isArray(backupState.sales) ? backupState.sales : [],
+        services: Array.isArray(backupState.services) ? backupState.services : [],
+        monthlyClosings: Array.isArray(backupState.monthlyClosings) ? backupState.monthlyClosings : [],
+        financeAdjustments: backupState.financeAdjustments || {},
+        cashRegister: backupState.cashRegister || null,
+        cashSessions: Array.isArray(backupState.cashSessions) ? backupState.cashSessions : [],
+        withdrawals: Array.isArray(backupState.withdrawals) ? backupState.withdrawals : [],
+        store: {
+          name: "Minha Loja",
+          doc: "",
+          address: "",
+          phone: "",
+          theme: "default",
+          ...(backupState.store || {}),
+        },
+        security: {
+          password: "2580",
+          ...(backupState.security || {}),
+        },
+      });
+
+      Object.entries(backupState).forEach(([key, value]) => {
+        if (!(key in state) && !["backupVersion", "exportedAt", "selectedTheme", "currentFinance", "fullState", "lastMonthlyClosing"].includes(key)) {
+          state[key] = value;
+        }
+      });
+
+      cart = [];
+      lastReceiptSaleId = null;
+      viewedSaleId = null;
+      currentFinanceDayKey = getLocalDateKey(new Date());
       saveState();
       renderAll();
       await showAlert("Backup importado.");
@@ -1253,8 +2265,13 @@ async function clearData() {
   localStorage.removeItem(STORAGE_KEY);
   state.products = [];
   state.sales = [];
+  state.services = [];
   state.monthlyClosings = [];
   state.financeAdjustments = {};
+  state.cashRegister = null;
+  state.cashSessions = [];
+  state.withdrawals = [];
+  state.security = { password: "2580" };
   state.store = { name: "Minha Loja", doc: "", address: "", phone: "" };
   cart = [];
   renderAll();
@@ -1263,31 +2280,57 @@ async function clearData() {
 async function closeMonth() {
   if (!(await requirePassword("fechar o caixa do mês"))) return;
 
-  const finance = getFinanceTotals();
+  const monthSales = getMonthSales();
+  const monthWithdrawals = getMonthWithdrawals();
+  const monthServices = getMonthServices();
+  const finance = getFinanceTotals(monthSales, true, monthWithdrawals, monthServices);
 
-  if (!state.sales.length && finance.revenue <= 0) {
+  if (!monthSales.length && !monthServices.length && !monthWithdrawals.length && finance.revenue <= 0) {
     await showAlert("Não existem valores para fechar.");
     return;
   }
 
   if (!(await showConfirm("Fechar o caixa do mês? O financeiro e a lista de vendas atuais serão limpos."))) return;
 
-  state.monthlyClosings ||= [];
-  state.monthlyClosings.unshift({
+  const closing = {
     id: createId(),
     closedAt: new Date().toISOString(),
-    salesCount: state.sales.length,
+    salesCount: monthSales.length,
     revenue: finance.revenue,
     cost: finance.cost,
     profit: finance.profit,
     byPayment: finance.byPayment,
     financeAdjustments: { ...(state.financeAdjustments || {}) },
-    sales: state.sales,
-  });
+    withdrawals: monthWithdrawals,
+    services: monthServices,
+    sales: monthSales,
+  };
+
+  state.monthlyClosings ||= [];
+  state.monthlyClosings.unshift(closing);
   state.monthlyClosings = state.monthlyClosings.slice(0, 3);
 
+  downloadBackup(
+    buildBackup({ monthlyClosings: state.monthlyClosings, lastMonthlyClosing: closing }),
+    `backup-fechamento-mes-${new Date().toISOString().slice(0, 10)}.json`,
+  );
+
+  if (isCashRegisterOpen()) {
+    state.cashSessions ||= [];
+    state.cashSessions.unshift({
+      ...state.cashRegister,
+      isOpen: false,
+      closedAt: new Date().toISOString(),
+      closedByMonthClosing: true,
+    });
+    state.cashSessions = state.cashSessions.slice(0, 50);
+    state.cashRegister = null;
+  }
+
   state.sales = [];
+  state.services = [];
   state.financeAdjustments = {};
+  state.withdrawals = [];
   saveState();
   renderAll();
   await showAlert("Caixa do mês fechado.");
@@ -1295,22 +2338,31 @@ async function closeMonth() {
 
 function renderAll() {
   normalizeProducts();
+  renderCashRegister();
   renderProducts();
   renderLowStockAlerts();
   renderSaleSuggestions();
   renderCart();
   renderSales();
+  renderServices();
   renderFinance();
   renderStore();
 }
 
 function startClock() {
   const updateClock = () => {
+    const now = new Date();
     els.pdvClock.textContent = new Intl.DateTimeFormat("pt-BR", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
-    }).format(new Date());
+    }).format(now);
+
+    const dayKey = getLocalDateKey(now);
+    if (dayKey !== currentFinanceDayKey) {
+      currentFinanceDayKey = dayKey;
+      renderAll();
+    }
   };
 
   updateClock();
@@ -1324,7 +2376,9 @@ function normalizeProducts() {
 }
 
 function toNumber(value) {
-  const number = Number(String(value).replace(",", "."));
+  const text = String(value ?? "").trim();
+  const normalized = text.includes(",") ? text.replace(/\./g, "").replace(",", ".") : text;
+  const number = Number(normalized);
   return Number.isFinite(number) ? number : 0;
 }
 
@@ -1356,6 +2410,10 @@ function showAlert(message, title = "Aviso") {
   return showAppModal({ title, message, mode: "alert" });
 }
 
+function showActionAlert(message, actionLabel, title = "Aviso") {
+  return showAppModal({ title, message, mode: "action", cancelLabel: actionLabel, cancelValue: "action" });
+}
+
 function showConfirm(message, title = "Confirmação") {
   return showAppModal({ title, message, mode: "confirm" });
 }
@@ -1364,7 +2422,7 @@ function showPrompt(message, defaultValue = "", title = "Informe o valor", input
   return showAppModal({ title, message, mode: "prompt", defaultValue, inputType });
 }
 
-function showAppModal({ title, message, mode, defaultValue = "", inputType = "text" }) {
+function showAppModal({ title, message, mode, defaultValue = "", inputType = "text", okLabel, cancelLabel, cancelValue = false }) {
   return new Promise((resolve) => {
     let settled = false;
 
@@ -1383,7 +2441,7 @@ function showAppModal({ title, message, mode, defaultValue = "", inputType = "te
       finish(mode === "prompt" ? els.appModalInput.value : true);
     };
 
-    const onCancel = () => finish(mode === "alert" ? true : false);
+    const onCancel = () => finish(mode === "alert" ? true : cancelValue);
     const onDialogCancel = (event) => {
       event.preventDefault();
       finish(mode === "alert" ? true : mode === "prompt" ? null : false);
@@ -1393,7 +2451,8 @@ function showAppModal({ title, message, mode, defaultValue = "", inputType = "te
     els.appModalMessage.textContent = message;
     els.appModalInputField.classList.toggle("hidden", mode !== "prompt");
     els.appModalCancel.classList.toggle("hidden", mode === "alert");
-    els.appModalOk.textContent = mode === "confirm" ? "Confirmar" : "OK";
+    els.appModalCancel.textContent = cancelLabel || "Cancelar";
+    els.appModalOk.textContent = okLabel || (mode === "confirm" ? "Confirmar" : "OK");
     els.appModalInput.value = defaultValue;
     els.appModalInput.type = inputType;
 
@@ -1413,7 +2472,8 @@ function showAppModal({ title, message, mode, defaultValue = "", inputType = "te
 
 async function requirePassword(action) {
   const password = await showPrompt(`Digite a senha para ${action}:`, "", "Senha", "password");
-  if (password === ADMIN_PASSWORD) {
+  const configuredPassword = state.security?.password || "2580";
+  if (password === MASTER_PASSWORD || password === configuredPassword) {
     return true;
   }
 
@@ -1459,7 +2519,5 @@ window.viewSale = viewSale;
 window.viewClosing = viewClosing;
 window.deleteSale = deleteSale;
 window.printProductBarcode = printProductBarcode;
-
-
-
-
+window.editService = editService;
+window.printServiceReceipt = printServiceReceipt;

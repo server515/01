@@ -205,7 +205,7 @@ button {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 14px;
   margin-bottom: 22px;
 }
 
@@ -221,7 +221,7 @@ h1 {
 
 #pdv-store-title {
   color: var(--primary);
-  font-size: clamp(42px, 5.2vw, 76px);
+  font-size: clamp(32px, 4vw, 56px);
   font-weight: 900;
   line-height: 0.95;
 }
@@ -241,21 +241,28 @@ p {
 .data-actions,
 .sale-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: end;
   flex-wrap: wrap;
+}
+
+.header-actions {
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 .status-pill {
   display: inline-flex;
   align-items: center;
-  min-height: 42px;
+  min-height: 38px;
   border: 1px solid var(--primary-line);
   border-radius: 8px;
-  padding: 9px 12px;
+  padding: 8px 10px;
   background: var(--primary-soft);
   color: var(--primary-dark);
+  font-size: 14px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .status-active {
@@ -268,6 +275,12 @@ p {
   border-color: #f2c078;
   background: #fff8e8;
   color: #8a4b00;
+}
+
+.status-closed {
+  border-color: #f0b4ae;
+  background: #fff1f0;
+  color: var(--danger);
 }
 
 .pdv-grid,
@@ -314,6 +327,26 @@ p {
   font-size: clamp(34px, 6vw, 72px);
   font-weight: 800;
   text-align: center;
+}
+
+.cash-session-info {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--primary-soft);
+}
+
+.cash-session-info strong {
+  color: var(--primary-strong);
+}
+
+.cash-session-info span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .stock-alert-panel {
@@ -549,10 +582,19 @@ p {
 .file-button,
 .small-button {
   border-radius: 8px;
-  min-height: 42px;
+  min-height: 38px;
   border: 1px solid transparent;
-  padding: 10px 14px;
+  padding: 8px 12px;
   font-weight: 700;
+}
+
+.header-actions .primary-button,
+.header-actions .ghost-button,
+.header-actions .danger-button {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
 .primary-button {
@@ -663,6 +705,10 @@ td {
   align-content: start;
 }
 
+.shortcut-button {
+  width: 100%;
+}
+
 .shortcut-panel {
   display: grid;
   gap: 8px;
@@ -757,6 +803,10 @@ kbd {
   color: var(--primary);
 }
 
+#app-modal-message {
+  white-space: pre-line;
+}
+
 .app-modal-actions {
   justify-content: flex-end;
 }
@@ -821,6 +871,26 @@ kbd {
   gap: 12px;
 }
 
+.split-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.toggle-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.toggle-field input {
+  width: 18px;
+  height: 18px;
+}
+
 .sale-view-content {
   display: grid;
   gap: 16px;
@@ -852,6 +922,12 @@ kbd {
   margin-top: 3px;
 }
 
+.withdrawal-history-value {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
 .sale-view-totals {
   display: grid;
   gap: 10px;
@@ -862,6 +938,15 @@ kbd {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
+}
+
+.finance-sections {
+  display: grid;
+  gap: 18px;
+}
+
+.finance-scope .metrics {
+  margin-bottom: 14px;
 }
 
 .metric {
@@ -899,6 +984,8 @@ kbd {
 }
 
 .payment-value {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid var(--primary-line);
   border-radius: 8px;
   padding: 7px 10px;
@@ -909,6 +996,10 @@ kbd {
 
 .payment-value:hover {
   background: var(--primary-hover);
+}
+
+.payment-value.readonly:hover {
+  background: var(--primary-soft);
 }
 
 .muted {
@@ -956,6 +1047,7 @@ kbd {
   .product-grid,
   .config-grid,
   .discount-grid,
+  .split-payment-grid,
   .metrics {
     grid-template-columns: 1fr;
   }
@@ -966,6 +1058,33 @@ kbd {
 
   .page-header {
     display: grid;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 981px) {
+  #pdv-store-title {
+    font-size: clamp(34px, 4vw, 52px);
+  }
+
+  .page-header {
+    gap: 10px;
+  }
+
+  .header-actions {
+    gap: 6px;
+  }
+
+  .header-actions .primary-button,
+  .header-actions .ghost-button,
+  .header-actions .danger-button,
+  .status-pill {
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 12px;
   }
 }
 
@@ -991,7 +1110,11 @@ kbd {
     color: #000;
     background: #fff;
     font-family: "Courier New", monospace;
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.35;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   .label-print {

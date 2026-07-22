@@ -19,6 +19,7 @@
 
         <nav class="nav" aria-label="Navegação principal">
           <button class="nav-button active" data-view="pdv" type="button">PDV</button>
+          <button class="nav-button" data-view="servicos" type="button">Serviço</button>
           <button class="nav-button" data-view="produtos" type="button">Produtos</button>
           <button class="nav-button" data-view="vendas" type="button">Vendas</button>
           <button class="nav-button locked" data-view="financeiro" type="button"><span>Financeiro</span><span class="lock-icon">🔒</span></button>
@@ -34,7 +35,9 @@
               <p>ATE AQUI NOS AJUDOU O SENHOR.</p>
             </div>
             <div class="header-actions">
-              <span class="status-pill" id="pdv-status">Caixa livre</span>
+              <button class="primary-button" id="cash-toggle" type="button">Abrir caixa</button>
+              <button class="primary-button" id="daily-report-pdv" type="button">Relatorio do dia</button>
+              <button class="ghost-button" id="open-withdrawal" type="button">Sangria</button>
               <button class="ghost-button" id="clear-cart" type="button">Limpar</button>
               <button class="primary-button" id="finish-sale" type="button">Finalizar venda</button>
             </div>
@@ -70,11 +73,8 @@
 
             <aside class="panel checkout-panel">
               <h2>Resumo</h2>
-              <div class="shortcut-panel" aria-label="Atalhos do PDV">
-                <div><kbd>F2</kbd><span>Iniciar venda</span></div>
-                <div><kbd>F3</kbd><span>Limpar venda</span></div>
-                <div><kbd>F10</kbd><span>Finalizar / confirmar</span></div>
-              </div>
+              <div class="cash-session-info" id="cash-session-info"></div>
+              <button class="ghost-button shortcut-button" id="show-shortcuts" type="button">Atalhos</button>
               <div class="summary-line">
                 <span>Itens</span>
                 <strong id="cart-items">0</strong>
@@ -96,6 +96,90 @@
           </section>
 
           <div class="pdv-clock" id="pdv-clock">--:--:--</div>
+        </section>
+
+        <section class="view" id="view-servicos">
+          <header class="page-header">
+            <div>
+              <h1>Serviço</h1>
+              <p>Cadastre serviços prestados e lance no financeiro.</p>
+            </div>
+          </header>
+
+          <div class="product-grid">
+            <form class="panel form-panel" id="service-form">
+              <input id="service-id" type="hidden" />
+              <label class="field">
+                <span>Valor</span>
+                <input id="service-amount" type="number" min="0" step="0.01" required />
+              </label>
+              <label class="field">
+                <span>Descrição do serviço</span>
+                <input id="service-description" required />
+              </label>
+              <label class="field">
+                <span>Número da OS (opcional)</span>
+                <input id="service-os" />
+              </label>
+              <label class="field">
+                <span>Tipo de pagamento</span>
+                <select id="service-payment-method">
+                  <option>Dinheiro</option>
+                  <option selected>Pix</option>
+                  <option>Débito</option>
+                  <option>Crédito</option>
+                </select>
+              </label>
+              <label class="toggle-field">
+                <input id="service-split-payment" type="checkbox" />
+                <span>Dividir pagamento</span>
+              </label>
+              <div class="split-payment-grid hidden" id="service-split-payment-fields">
+                <label class="field">
+                  <span>2ª forma</span>
+                  <select id="service-second-payment-method">
+                    <option>Dinheiro</option>
+                    <option>Pix</option>
+                    <option>Débito</option>
+                    <option selected>Crédito</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Valor na 2ª forma</span>
+                  <input id="service-second-payment-amount" type="number" min="0" step="0.01" value="0" />
+                </label>
+              </div>
+              <div class="summary-line hidden" id="service-primary-payment-line">
+                <span>Valor na 1ª forma</span>
+                <strong id="service-primary-payment-amount">R$ 0,00</strong>
+              </div>
+              <div class="form-actions">
+                <button class="primary-button" id="save-service" type="submit">Adicionar serviço</button>
+                <button class="ghost-button hidden" id="cancel-service-edit" type="button">Cancelar</button>
+              </div>
+            </form>
+
+            <section class="panel">
+              <div class="section-toolbar">
+                <h2>Serviços prestados</h2>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Descrição</th>
+                      <th>OS</th>
+                      <th>Pagamento</th>
+                      <th>Valor</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="services-body"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
         </section>
 
         <section class="view" id="view-produtos">
@@ -209,34 +293,82 @@
               <p>Acompanhe faturamento, custo e lucro bruto.</p>
             </div>
             <div class="header-actions">
+              <button class="primary-button" id="daily-report" type="button">Relatorio do dia</button>
+              <button class="ghost-button" id="withdrawal-history" type="button">Sangria</button>
               <button class="danger-button" id="close-month" type="button">Fechar caixa do mês</button>
             </div>
           </header>
 
-          <div class="metrics">
-            <article class="metric">
-              <span>Faturamento</span>
-              <strong id="metric-revenue">R$ 0,00</strong>
-            </article>
-            <article class="metric">
-              <span>Custo vendido</span>
-              <strong id="metric-cost">R$ 0,00</strong>
-            </article>
-            <article class="metric">
-              <span>Lucro bruto</span>
-              <strong id="metric-profit">R$ 0,00</strong>
-            </article>
-            <article class="metric">
-              <span>Ticket médio</span>
-              <strong id="metric-ticket">R$ 0,00</strong>
-            </article>
+          <div class="finance-sections">
+            <section class="panel finance-scope">
+              <h2>Caixa atual</h2>
+              <div class="metrics">
+                <article class="metric">
+                  <span>Faturamento</span>
+                  <strong id="cash-metric-revenue">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Custo vendido</span>
+                  <strong id="cash-metric-cost">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Lucro bruto</span>
+                  <strong id="cash-metric-profit">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Ticket medio</span>
+                  <strong id="cash-metric-ticket">R$ 0,00</strong>
+                </article>
+              </div>
+              <div id="cash-payment-summary" class="payment-summary"></div>
+            </section>
+
+            <section class="panel finance-scope">
+              <h2>Financeiro do dia</h2>
+              <div class="metrics">
+                <article class="metric">
+                  <span>Faturamento</span>
+                  <strong id="day-metric-revenue">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Custo vendido</span>
+                  <strong id="day-metric-cost">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Lucro bruto</span>
+                  <strong id="day-metric-profit">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Ticket medio</span>
+                  <strong id="day-metric-ticket">R$ 0,00</strong>
+                </article>
+              </div>
+              <div id="day-payment-summary" class="payment-summary"></div>
+            </section>
+
+            <section class="panel finance-scope">
+              <h2>Financeiro do mes</h2>
+              <div class="metrics">
+                <article class="metric">
+                  <span>Faturamento</span>
+                  <strong id="month-metric-revenue">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Custo vendido</span>
+                  <strong id="month-metric-cost">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Lucro bruto</span>
+                  <strong id="month-metric-profit">R$ 0,00</strong>
+                </article>
+                <article class="metric">
+                  <span>Ticket medio</span>
+                  <strong id="month-metric-ticket">R$ 0,00</strong>
+                </article>
+              </div>
+              <div id="month-payment-summary" class="payment-summary"></div>
+            </section>
           </div>
-
-          <section class="panel">
-            <h2>Resumo por pagamento</h2>
-            <div id="payment-summary" class="payment-summary"></div>
-          </section>
-
           <section class="panel finance-history">
             <h2>Fechamentos do caixa</h2>
             <div class="table-wrap">
@@ -291,6 +423,10 @@
                   <option value="pink">Rosa</option>
                   <option value="pink-black">Rosa e preto</option>
                 </select>
+              </label>
+              <label class="field">
+                <span>Senha do sistema</span>
+                <input id="admin-password" type="password" autocomplete="new-password" placeholder="Nova senha" />
               </label>
               <div class="form-actions">
                 <button class="primary-button" type="submit">Salvar configuração</button>
@@ -358,11 +494,38 @@
           <span>Tipo de pagamento</span>
           <select id="payment-method">
             <option>Dinheiro</option>
-            <option>Pix</option>
+            <option selected>Pix</option>
             <option>Débito</option>
             <option>Crédito</option>
           </select>
         </label>
+
+        <label class="toggle-field">
+          <input id="split-payment" type="checkbox" />
+          <span>Dividir pagamento</span>
+        </label>
+
+        <div class="split-payment-grid hidden" id="split-payment-fields">
+          <label class="field">
+            <span>2ª forma</span>
+            <select id="second-payment-method">
+              <option>Dinheiro</option>
+              <option>Pix</option>
+              <option>Débito</option>
+              <option selected>Crédito</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Valor na 2ª forma</span>
+            <input id="second-payment-amount" type="number" min="0" step="0.01" value="0" />
+          </label>
+        </div>
+
+        <div class="summary-line hidden" id="primary-payment-line">
+          <span>Valor na 1ª forma</span>
+          <strong id="primary-payment-amount">R$ 0,00</strong>
+        </div>
 
         <label class="field" id="amount-paid-field">
           <span>Valor pago</span>
@@ -376,7 +539,7 @@
 
         <div class="form-actions">
           <button class="ghost-button" id="cancel-payment" type="button">Cancelar</button>
-          <button class="primary-button" type="submit">Confirmar venda</button>
+          <button class="primary-button" id="confirm-payment" type="submit">Confirmar venda</button>
         </div>
       </form>
     </dialog>
@@ -396,6 +559,59 @@
         <div class="form-actions">
           <button class="ghost-button" id="close-sale-view-bottom" type="button">Fechar</button>
           <button class="primary-button" id="print-viewed-sale" type="button">Imprimir</button>
+        </div>
+      </section>
+    </dialog>
+
+    <dialog class="payment-modal" id="withdrawal-modal">
+      <form class="payment-box" id="withdrawal-form">
+        <header class="payment-header">
+          <div>
+            <h2>Sangria</h2>
+            <p>Informe o valor retirado do caixa.</p>
+          </div>
+          <button class="icon-button" id="close-withdrawal-modal" type="button" aria-label="Fechar">x</button>
+        </header>
+
+        <label class="field">
+          <span>Valor</span>
+          <input id="withdrawal-amount" type="number" min="0" step="0.01" value="0" required />
+        </label>
+
+        <label class="field">
+          <span>Tipo da sangria</span>
+          <select id="withdrawal-method">
+            <option>Dinheiro</option>
+            <option>Pix</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Descrição</span>
+          <input id="withdrawal-description" maxlength="120" placeholder="Motivo da sangria" required />
+        </label>
+
+        <div class="form-actions">
+          <button class="ghost-button" id="cancel-withdrawal" type="button">Cancelar</button>
+          <button class="primary-button" id="confirm-withdrawal" type="submit">OK e imprimir</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="payment-modal" id="withdrawal-history-modal">
+      <section class="payment-box">
+        <header class="payment-header">
+          <div>
+            <h2>Histórico de sangria</h2>
+            <p>Consulte e reimprima sangrias registradas.</p>
+          </div>
+          <button class="icon-button" id="close-withdrawal-history" type="button" aria-label="Fechar">x</button>
+        </header>
+
+        <div class="sale-view-list" id="withdrawal-history-list"></div>
+
+        <div class="form-actions">
+          <button class="ghost-button" id="close-withdrawal-history-bottom" type="button">Fechar</button>
         </div>
       </section>
     </dialog>
