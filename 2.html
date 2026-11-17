@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>PCB Viewer Otimizado</title>
+<title>PCB Viewer Optimized</title>
 <style>
   :root { --top-h: 54px; --side-w: 72px; background: #ffffff; color: #10274b; }
   html,body { height:100%; margin:0; background:#ffffff; font-family:system-ui, Arial, sans-serif; color:#10274b; }
@@ -87,7 +87,7 @@
   #btnTheme svg { width:10px; height:10px; display:block; }
   #controls { display:flex; gap:8px; flex-wrap:nowrap; align-items:center; margin-left:-90px; }
   #controls button {
-    padding: 10px 12px;
+    padding: 8px 10px;
     background: linear-gradient(180deg, #f4f8ff 0%, #dce8ff 100%);
     color: #0c3565;
     border: 1px solid #acc4ee;
@@ -99,8 +99,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 36px;
-    height: 38px;
+    min-width: 34px;
+    height: 34px;
     box-shadow: 0 4px 10px rgba(16, 39, 75, 0.08);
     transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
   }
@@ -145,8 +145,8 @@
     outline:none;
   }
   .search-group button {
-    width:38px;
-    height:38px;
+    width:34px;
+    height:34px;
     border:none;
     background:#eaf2ff;
     display:flex;
@@ -176,13 +176,16 @@
     color:#ffffff;
     box-shadow: 0 6px 14px rgba(27, 94, 215, 0.25);
   }
-  body.dark-theme { background:#000000; color:#f5f5f5; }
-  body.dark-theme #topbar, body.dark-theme #sidebar, body.dark-theme #bottombar { background:#12181f; color:#f5f5f5; border-color:#252f3c; }
+  body.dark-theme { background:#000000; color:#e8edf4; }
+  body.dark-theme #topbar, body.dark-theme #sidebar, body.dark-theme #bottombar { background:#080c11; color:#e8edf4; border-color:#1b2633; }
   body.dark-theme #canvas-wrap, body.dark-theme #baseCanvas { background:#000000; }
-  body.dark-theme .meta-card, body.dark-theme .layer-btn, body.dark-theme #themeMenu { background:#182028; border-color:#5e9aff; }
-  body.dark-theme .layer-btn { border-color:#5e9aff; }
+  body.dark-theme #canvas-wrap { background:radial-gradient(ellipse at center, #12366b 0%, #071326 48%, #000000 100%); }
+  body.dark-theme #baseCanvas { background:transparent; }
+  body.dark-theme .meta-card, body.dark-theme #themeMenu { background:#0c1219; border-color:#25374b; }
+  body.dark-theme .layer-btn { border-color:#315b8e; }
   body.dark-theme .theme-option { color:#f5f5f5; }
-  body.dark-theme .theme-option:hover { background:#243143; }
+  body.dark-theme .theme-option:hover { background:#15202d; }
+  body.dark-theme .theme-option.active { background:#132640; color:#e8edf4; }
   body.pcb-theme #canvas-wrap, body.pcb-theme #baseCanvas { background:#000000; }
   body.pcb-theme #topbar, body.pcb-theme #sidebar, body.pcb-theme #bottombar { background:#12181f; color:#f5f5f5; border-color:#252f3c; }
   body.pcb-theme .meta-card, body.pcb-theme .layer-btn, body.pcb-theme #themeMenu { background:#182028; border-color:#5e9aff; }
@@ -195,20 +198,29 @@
   body.pcb-theme #controls button:active { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
   body.pcb-theme #controls button.toggle-on { background: linear-gradient(180deg, #3360c5 0%, #1d3e7a 100%); border-color: #4e7ac6; box-shadow: 0 6px 14px rgba(33, 109, 230, 0.28); color:#ffffff; }
   body.pcb-light-theme #canvas-wrap, body.pcb-light-theme #baseCanvas { background:#ffffff; }
+  body.pcb-light-theme #baseCanvas, body.pcb-theme #baseCanvas { background:transparent; }
   body.xzz-theme #canvas-wrap, body.xzz-theme #baseCanvas { background:#000000; }
   body.xzz-green-theme #canvas-wrap, body.xzz-green-theme #baseCanvas { background:#000000; }
-  body.dark-theme #controls button { background: linear-gradient(180deg, #1a2939 0%, #122033 100%); color:#f5f5f5; border-color:#2b3b52; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35); }
-  body.dark-theme #controls button:hover { background: linear-gradient(180deg, #1f3249 0%, #152439 100%); border-color:#445b82; }
+  body.dark-theme #controls button { background: linear-gradient(180deg, #121a23 0%, #090e14 100%); color:#e8edf4; border-color:#25364a; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45); }
+  body.dark-theme #controls button:hover { background: linear-gradient(180deg, #182431 0%, #0e151d 100%); border-color:#365579; }
   body.dark-theme #controls button:active { box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); }
-  body.dark-theme #controls button.toggle-on { background: linear-gradient(180deg, #3360c5 0%, #1d3e7a 100%); border-color: #4e7ac6; box-shadow: 0 6px 14px rgba(33, 109, 230, 0.28); color:#ffffff; }
+  body.dark-theme #controls button.toggle-on { background: linear-gradient(180deg, #1d4e88 0%, #143662 100%); border-color:#426fa9; box-shadow: 0 6px 14px rgba(20, 54, 98, 0.4); color:#ffffff; }
   body.dark-theme input[type=file],
   body.dark-theme #searchInput,
   body.dark-theme #netSearchInput,
   body.dark-theme #searchBtn,
-  body.dark-theme #netSearchBtn { background:#182028; color:#f5f5f5; border-color:#2b3644; }
+  body.dark-theme #netSearchBtn { background:#0c1219; color:#e8edf4; border-color:#253443; }
   body.dark-theme #searchBtn,
   body.dark-theme #netSearchBtn { color:#f5f5f5; }
-  body.dark-theme .sidebar-title { color:#a1c1ff; }
+  body.dark-theme .search-group { background:#0c1219; border-color:#253443; box-shadow:inset 0 1px 2px rgba(0,0,0,0.45); }
+  body.dark-theme .search-group input { background:#0c1219; color:#e8edf4; color-scheme:dark; }
+  body.dark-theme .search-group input::placeholder { color:#91a5bf; opacity:1; }
+  body.dark-theme .search-group button { background:#0c1219; }
+  body.dark-theme .search-group button:hover { background:#172330; }
+  body.dark-theme .search-group button svg { stroke:#78a8f0; }
+  body.dark-theme .sidebar-title { color:#88aee0; }
+  body.dark-theme .meta-label { color:#8199b7; }
+  body.dark-theme .meta-value { color:#e0e7f0; }
   button.warn { background:#d9534f; color:#fff; }
   #info {
     min-width:0;
@@ -293,6 +305,7 @@
     color: #10274b;
     font-size: 20px;
   }
+  body.dark-theme #loading { background:rgba(4, 9, 17, 0.92); color:#f5f5f5; }
   #loading.hidden { display: none; }
   .spinner {
     border: 4px solid #d8e3fb;
@@ -303,16 +316,17 @@
     animation: spin 1s linear infinite;
     margin-right: 10px;
   }
+  body.dark-theme .spinner { border-color:#26394f; border-top-color:#5e9aff; }
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
 </style>
 </head>
-<body>
+<body class="dark-theme">
 <div id="loading" class="hidden">
   <div class="spinner"></div>
-  <span id="loadingText">Loading...</span>
+  <span id="loadingText">Loading Multlayer</span>
 </div>
 <div id="app">
   <div id="topbar">
@@ -321,14 +335,9 @@
     </div>
       <div id="controls">
       <button id="btnCenter" title="Center"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="4" y="4" width="16" height="12" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 18h8v1H8z" fill="currentColor"/><path d="M9 7h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 11h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+      <button id="btnRotateLeft" title="Rotate 90° counterclockwise" aria-label="Rotate 90° counterclockwise"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 10a8 8 0 1 1 2.3 6.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4 4v6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="btnRotateRight" title="Rotate 90° clockwise" aria-label="Rotate 90° clockwise"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M20 10a8 8 0 1 0-2.3 6.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M20 4v6h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
       <button id="btnClear" title="Clear selection"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-      <button id="btnLoadJson" title="Carregar JSON local" aria-label="Carregar JSON local">
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path d="M3 7h5l2 3h11v9H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-          <path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h9v1" fill="none" stroke="currentColor" stroke-width="2"/>
-        </svg>
-      </button>
-      <input id="jsonFileInput" type="file" accept=".json,application/json" style="display:none" />
       <button id="btnZoomIn" title="Zoom In"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10.5 7.5v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 10.5h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button id="btnZoomOut" title="Zoom Out"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 15l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7.5 10.5h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
       <button id="btnToggleDiodo" title="Show/hide diode" aria-label="Show or hide diode">
@@ -352,7 +361,7 @@
     <div class="search-area">
       <div class="search-group">
         <input id="searchInput" type="text" placeholder="Search component..." list="componentList" />
-        <button id="searchBtn" aria-label="Buscar componente">
+        <button id="searchBtn" aria-label="Search component">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="10.5" cy="10.5" r="6.5" />
             <path d="M15 15l5 5" stroke-linecap="round" />
@@ -361,7 +370,7 @@
       </div>
       <div class="search-group">
         <input id="netSearchInput" type="text" placeholder="Search net..." list="netList" />
-        <button id="netSearchBtn" aria-label="Buscar net">
+        <button id="netSearchBtn" aria-label="Search net">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="10.5" cy="10.5" r="6.5" />
             <path d="M15 15l5 5" stroke-linecap="round" />
@@ -374,7 +383,7 @@
     <datalist id="netList"></datalist>
 
     <div id="themeMenuWrapper">
-      <button id="btnTheme" title="Tema" aria-label="Tema" type="button">
+      <button id="btnTheme" title="Theme" aria-label="Theme" type="button">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <defs>
             <linearGradient id="themeGrad" x1="0" y1="0" x2="1" y2="1">
@@ -389,8 +398,7 @@
       <div id="themeMenu">
         <button class="theme-option" data-theme="light-bw"> STANDARD</button>
         <button class="theme-option" data-theme="pcb-light">GREEN LIGHT</button>
-        <button class="theme-option active" data-theme="light">LIGHT</button>
-        <button class="theme-option" data-theme="dark">DARK</button>
+        <button class="theme-option active" data-theme="dark">DARK</button>
         <button class="theme-option" data-theme="pcb">GREEN DARK</button>
         <button class="theme-option" data-theme="xzz">DARK RED</button>
         <button class="theme-option" data-theme="xzz-green">DARK BLUE</button>
@@ -423,11 +431,11 @@
         <div id="metaComp" class="meta-value">-</div>
       </div>
       <div class="meta-card">
-        <div class="meta-label">DIODO</div>
+        <div class="meta-label">DIODE</div>
         <div id="metaDiodo" class="meta-value">-</div>
       </div>
       <div class="meta-card">
-        <div class="meta-label">VOLT</div>
+        <div class="meta-label">VOLTAGE</div>
         <div id="metaVoltage" class="meta-value">-</div>
       </div>
     </div>
@@ -446,6 +454,11 @@ let pcb = null;
 let zoom = 1;
 let offsetX = 0;
 let offsetY = 0;
+let rotationAngle = 0;
+let rotationCos = 1;
+let rotationSin = 0;
+let rotationCenterX = 0;
+let rotationCenterY = 0;
 let isPanning = false;
 let lastMouse = {x:0,y:0};
 let pointerDown = null;
@@ -461,7 +474,7 @@ let embeddedImagePcbLight = null;
 let embeddedImageLightBw = null;
 let embeddedImageXzz = null;
 let embeddedImageXzzGreen = null;
-let currentTheme = 'light-bw';
+let currentTheme = 'dark';
 // Função para converter hex para rgba com transparência
 function hexToRGBA(hex, alpha){
     hex = hex.replace('#','');
@@ -674,10 +687,9 @@ document.getElementById('netSearchInput').addEventListener('keydown', (e)=>{
 document.getElementById('netSearchBtn').addEventListener('click', searchNet);
 
 document.getElementById('btnCenter').addEventListener('click', ()=>{ centerPCB(); render(); });
+document.getElementById('btnRotateLeft').addEventListener('click', ()=>rotateBoard(1));
+document.getElementById('btnRotateRight').addEventListener('click', ()=>rotateBoard(-1));
 document.getElementById('btnClear').addEventListener('click', clearSelection);
-
-document.getElementById('btnLoadJson').addEventListener('click', ()=> document.getElementById('jsonFileInput').click());
-document.getElementById('jsonFileInput').addEventListener('change', handleJsonFileChange);
 
 document.getElementById('btnZoomIn').addEventListener('click', zoomIn);
 document.getElementById('btnZoomOut').addEventListener('click', zoomOut);
@@ -693,31 +705,6 @@ document.querySelectorAll('.theme-option').forEach(button => {
 window.addEventListener('click', (event) => {
   if(!event.target.closest('#themeMenuWrapper')) closeThemeMenu();
 });
-
-function handleJsonFileChange(event) {
-  const file = event.target.files && event.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  document.getElementById('loading').classList.remove('hidden');
-  document.getElementById('loadingText').textContent = 'Carregando JSON...';
-  reader.onload = () => {
-    try {
-      pcb = JSON.parse(reader.result);
-      currentFileName = file.name || 'board.json';
-      prepareAfterLoad();
-    } catch(err) {
-      console.error('JSON inválido', err);
-      document.getElementById('loadingText').textContent = 'JSON inválido';
-      setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1400);
-    }
-  };
-  reader.onerror = () => {
-    console.error('Erro ao ler arquivo JSON');
-    document.getElementById('loadingText').textContent = 'Erro ao ler arquivo';
-    setTimeout(() => document.getElementById('loading').classList.add('hidden'), 1400);
-  };
-  reader.readAsText(file);
-}
 
 function updateValueToggleButtons(){
   const diodoBtn = document.getElementById('btnToggleDiodo');
@@ -783,7 +770,24 @@ function loadEmbeddedImage(){
     const img = new Image();
     img.crossOrigin = 'Anonymous';
     img.onload = () => {
-      embeddedImageOriginal = img;
+      const transparentCanvas = document.createElement('canvas');
+      transparentCanvas.width = img.width;
+      transparentCanvas.height = img.height;
+      const transparentCtx = transparentCanvas.getContext('2d');
+      transparentCtx.drawImage(img, 0, 0);
+      const transparentData = transparentCtx.getImageData(0, 0, img.width, img.height);
+      const pixels = transparentData.data;
+      const pixelCount = img.width * img.height;
+      for(let index = 0; index < pixelCount; index++){
+        const pixelOffset = index * 4;
+        if(pixels[pixelOffset] <= 24 &&
+           pixels[pixelOffset + 1] <= 24 &&
+           pixels[pixelOffset + 2] <= 24){
+          pixels[pixelOffset + 3] = 0;
+        }
+      }
+      transparentCtx.putImageData(transparentData, 0, 0);
+      embeddedImageOriginal = transparentCanvas;
 
       // negative image
       const negCanvas = document.createElement('canvas');
@@ -801,7 +805,7 @@ function loadEmbeddedImage(){
       negCtx.putImageData(negData, 0, 0);
       embeddedImageNegative = negCanvas;
 
-      // light-bw: preserve gray, convert all black/dark pixels -> white
+      // STANDARD: preserve the board and make near-black background transparent
       const lightBwCanvas = document.createElement('canvas');
       lightBwCanvas.width = img.width;
       lightBwCanvas.height = img.height;
@@ -813,27 +817,14 @@ function loadEmbeddedImage(){
         const r = lb[i], g = lb[i+1], b = lb[i+2];
         const brightness = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
         const isNearBlack = brightness <= 20;
-        const isGray = Math.abs(r - g) < 15 && Math.abs(r - b) < 15 && Math.abs(g - b) < 15;
         if(isNearBlack){
-          lb[i] = 255;
-          lb[i+1] = 255;
-          lb[i+2] = 255;
-        } else if(isGray) {
-          // keep gray tones unchanged
-          lb[i] = r;
-          lb[i+1] = g;
-          lb[i+2] = b;
-        } else {
-          // preserve non-gray colors as-is
-          lb[i] = r;
-          lb[i+1] = g;
-          lb[i+2] = b;
+          lb[i+3] = 0;
         }
       }
       lightBwCtx.putImageData(lbData, 0, 0);
       embeddedImageLightBw = lightBwCanvas;
 
-      // pcb image: map gray -> green, keep black
+      // PCB themes: map gray -> green and remove near-black background
       const pcbCanvas = document.createElement('canvas');
       pcbCanvas.width = img.width;
       pcbCanvas.height = img.height;
@@ -844,9 +835,8 @@ function loadEmbeddedImage(){
       for(let i = 0; i < pdata.length; i += 4){
         const r = pdata[i], g = pdata[i+1], b = pdata[i+2];
         const brightness = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-        if(brightness <= 10){
-          // keep black
-          pdata[i] = 0; pdata[i+1] = 0; pdata[i+2] = 0;
+        if(brightness <= 20){
+          pdata[i+3] = 0;
         } else {
           const isGray = Math.abs(r - g) < 15 && Math.abs(r - b) < 15 && Math.abs(g - b) < 15;
           if(isGray){
@@ -864,22 +854,12 @@ function loadEmbeddedImage(){
       pcbCtx.putImageData(pcbImageData, 0, 0);
       embeddedImagePcb = pcbCanvas;
 
-      // pcb-light: start from pcbCanvas but convert black -> white (keep greens)
+      // pcb-light: preserve transparency and green board colors
       const pcbLightCanvas = document.createElement('canvas');
       pcbLightCanvas.width = pcbCanvas.width;
       pcbLightCanvas.height = pcbCanvas.height;
       const pcbLightCtx = pcbLightCanvas.getContext('2d');
       pcbLightCtx.drawImage(pcbCanvas, 0, 0);
-      const lightData = pcbLightCtx.getImageData(0, 0, pcbLightCanvas.width, pcbLightCanvas.height);
-      const ldata = lightData.data;
-      for(let i = 0; i < ldata.length; i += 4){
-        const r = ldata[i], g = ldata[i+1], b = ldata[i+2];
-        // black pixels in pcbCanvas are exact 0,0,0 -> convert to white
-        if(r === 0 && g === 0 && b === 0){
-          ldata[i] = 255; ldata[i+1] = 255; ldata[i+2] = 255;
-        }
-      }
-      pcbLightCtx.putImageData(lightData, 0, 0);
       embeddedImagePcbLight = pcbLightCanvas;
 
       // xzz theme: black image with gray edges drawn in red
@@ -894,7 +874,7 @@ function loadEmbeddedImage(){
       for(let i = 0; i < xzzData.data.length; i += 4){
         const r = xzzData.data[i], g = xzzData.data[i+1], b = xzzData.data[i+2];
         const isGray = Math.abs(r - g) < 15 && Math.abs(r - b) < 15 && Math.abs(g - b) < 15;
-        if(isGray && (r !== 255 || g !== 255 || b !== 255)) mask[i / 4] = 1;
+        if(xzzData.data[i + 3] !== 0 && isGray && (r !== 255 || g !== 255 || b !== 255)) mask[i / 4] = 1;
       }
       const width = xzzCanvas.width;
       const height = xzzCanvas.height;
@@ -1159,7 +1139,7 @@ function buildLayerButtons(){
 
   const allRow = document.createElement('div');
   allRow.className = allVisible ? 'layer-btn layer-visible' : 'layer-btn layer-hidden';
-  allRow.title = 'Ativar/desativar todas as layers';
+  allRow.title = 'Toggle all layers';
   const allName = document.createElement('div'); allName.className='layer-name'; allName.textContent='ALL';
   allRow.appendChild(allName);
   allRow.style.background = '#ffffff';
@@ -1187,7 +1167,7 @@ function buildLayerButtons(){
     row.className = visible[L]?'layer-btn layer-visible':'layer-btn layer-hidden';
     row.dataset.layer=L;
     const displayIndex = index + 1;
-    row.title = L === 'Top' ? `Layer ${displayIndex} (Top sempre ativa)` : `Layer ${displayIndex}`;
+    row.title = L === 'Top' ? `Layer ${displayIndex} (Top layer always enabled)` : `Layer ${displayIndex}`;
     const name = document.createElement('div'); name.className='layer-name'; name.textContent = String(displayIndex);
     const isLocked = L === 'Top';
     row.appendChild(name);
@@ -1233,6 +1213,30 @@ function getPCBBbox(){
   return {minX, minY, maxX, maxY};
 }
 
+function rotateWorldPoint(x, y){
+  const dx = x - rotationCenterX;
+  const dy = y - rotationCenterY;
+  return {
+    x: rotationCenterX + dx * rotationCos - dy * rotationSin,
+    y: rotationCenterY + dx * rotationSin + dy * rotationCos
+  };
+}
+
+function getRotatedSize(width, height){
+  const cos = Math.abs(rotationCos);
+  const sin = Math.abs(rotationSin);
+  return {
+    width: width * cos + height * sin,
+    height: width * sin + height * cos
+  };
+}
+
+function setViewCenter(worldX, worldY, screenX = canvas.width / 2, screenY = canvas.height / 2){
+  const rotated = rotateWorldPoint(worldX, worldY);
+  offsetX = screenX - rotated.x * zoom;
+  offsetY = screenY + rotated.y * zoom;
+}
+
 function centerPCB(){
   if(!pcb) return;
   const bbox = getPCBBbox();
@@ -1242,12 +1246,30 @@ function centerPCB(){
   const h = maxY - minY;
   if(w<=0 || h<=0) return;
 
-  // Calcula zoom para caber na tela
-  zoom = Math.min(canvas.width/w, canvas.height/h)*1.0;
+  rotationCenterX = minX + w / 2;
+  rotationCenterY = minY + h / 2;
+  const rotatedSize = getRotatedSize(w, h);
+  zoom = Math.min(canvas.width / rotatedSize.width, canvas.height / rotatedSize.height) * 1.0;
 
-  // Centraliza
-  offsetX = canvas.width/2 - (minX + w/2)*zoom;
-  offsetY = canvas.height/2 + (minY + h/2)*zoom; // Note o sinal + porque invertido Y
+  setViewCenter(rotationCenterX, rotationCenterY);
+}
+
+function rotateBoard(direction){
+  const bbox = getPCBBbox();
+  if(!bbox) return;
+  const centerX = (bbox.minX + bbox.maxX) / 2;
+  const centerY = (bbox.minY + bbox.maxY) / 2;
+  rotationCenterX = centerX;
+  rotationCenterY = centerY;
+  rotationAngle = (rotationAngle + direction * Math.PI / 2) % (Math.PI * 2);
+  rotationCos = Math.cos(rotationAngle);
+  rotationSin = Math.sin(rotationAngle);
+
+  const rotatedSize = getRotatedSize(bbox.maxX - bbox.minX, bbox.maxY - bbox.minY);
+  const fitZoom = Math.min(canvas.width / rotatedSize.width, canvas.height / rotatedSize.height);
+  zoom = Math.min(zoom, fitZoom * 0.9);
+  setViewCenter(centerX, centerY);
+  render();
 }
 
 function centerOnComponent(comp){
@@ -1266,16 +1288,15 @@ function centerOnComponent(comp){
   const h = maxY - minY;
   if(w <= 0 || h <= 0) return;
 
-  zoom = Math.min(canvas.width / w, canvas.height / h) * 0.4; // menos zoom para mais margem
+  const rotatedSize = getRotatedSize(w, h);
+  zoom = Math.min(canvas.width / rotatedSize.width, canvas.height / rotatedSize.height) * 0.4; // menos zoom para mais margem
 
-  offsetX = canvas.width / 2 - (minX + w / 2) * zoom;
-  offsetY = canvas.height / 2 + (minY + h / 2) * zoom;
+  setViewCenter(minX + w / 2, minY + h / 2);
 }
 
 function centerOnPoint(x, y){
   zoom = 0.4; // zoom reduzido para centralizar o ponto
-  offsetX = canvas.width / 2 - x * zoom;
-  offsetY = canvas.height / 2 + y * zoom; // Y invertido
+  setViewCenter(x, y);
 }
 
 function zoomIn(){
@@ -1285,8 +1306,7 @@ function zoomIn(){
   const worldBefore = screenToWorld(mouseX, mouseY);
   zoom *= factor;
   zoom = Math.min(zoom, 1000);
-  offsetX = mouseX - worldBefore.x * zoom;
-  offsetY = mouseY + worldBefore.y * zoom;
+  setViewCenter(worldBefore.x, worldBefore.y, mouseX, mouseY);
   render();
 }
 
@@ -1297,13 +1317,24 @@ function zoomOut(){
   const worldBefore = screenToWorld(mouseX, mouseY);
   zoom *= factor;
   zoom = Math.max(zoom, 0.0001);
-  offsetX = mouseX - worldBefore.x * zoom;
-  offsetY = mouseY + worldBefore.y * zoom;
+  setViewCenter(worldBefore.x, worldBefore.y, mouseX, mouseY);
   render();
 }
 
-function wToSxy(x,y){ return { x:x*zoom+offsetX, y:-y*zoom+offsetY }; }
-function screenToWorld(x,y){ return { x:(x-offsetX)/zoom, y:-(y-offsetY)/zoom }; }
+function wToSxy(x,y){
+  const rotated = rotateWorldPoint(x, y);
+  return { x:rotated.x*zoom+offsetX, y:-rotated.y*zoom+offsetY };
+}
+function screenToWorld(x,y){
+  const rotatedX = (x - offsetX) / zoom;
+  const rotatedY = -(y - offsetY) / zoom;
+  const dx = rotatedX - rotationCenterX;
+  const dy = rotatedY - rotationCenterY;
+  return {
+    x: rotationCenterX + dx * rotationCos + dy * rotationSin,
+    y: rotationCenterY - dx * rotationSin + dy * rotationCos
+  };
+}
 
 canvas.addEventListener('mousedown', e=>{
   isPanning=true;
@@ -1339,11 +1370,7 @@ canvas.addEventListener('wheel', e => {
     zoom = Math.max(0.0001, Math.min(zoom, 1000));
 
     // Ponto do mundo depois do zoom
-    const worldAfter = worldBefore; // queremos que continue no mesmo ponto do mouse
-
-    // Ajusta offset para manter o ponto do mouse fixo
-    offsetX = mouseX - worldAfter.x * zoom;
-    offsetY = mouseY + worldAfter.y * zoom; // Note: invertido y
+    setViewCenter(worldBefore.x, worldBefore.y, mouseX, mouseY);
 
     render();
 }, { passive: false });
@@ -1587,9 +1614,22 @@ function drawPolygon(points, fillColor='transparent', strokeColor='#fff', lineWi
    Helper: check if bbox is visible
    ================================ */
 function bboxVisible(bbox){
+  const bounds = getScreenBounds(bbox);
+  return !(bounds.maxX < 0 || bounds.maxY < 0 || bounds.minX > canvas.width || bounds.minY > canvas.height);
+}
+
+function getScreenBounds(bbox){
   const {minX,minY,maxX,maxY}=bbox;
-  const topLeft = wToSxy(minX,maxY), bottomRight = wToSxy(maxX,minY);
-  return !(bottomRight.x<0 || bottomRight.y<0 || topLeft.x>canvas.width || topLeft.y>canvas.height);
+  const center = wToSxy((minX + maxX) / 2, (minY + maxY) / 2);
+  const size = getRotatedSize((maxX - minX) * zoom, (maxY - minY) * zoom);
+  const halfWidth = size.width / 2;
+  const halfHeight = size.height / 2;
+  return {
+    minX: center.x - halfWidth,
+    minY: center.y - halfHeight,
+    maxX: center.x + halfWidth,
+    maxY: center.y + halfHeight
+  };
 }
 
 function getPathBBox(path){
@@ -2270,12 +2310,11 @@ function drawPins(options = {}) {
       const renderInfo = getPinRenderInfo(comp, pin);
       if(!bboxVisible(renderInfo.bbox)) continue;
 
-      const topLeft = wToSxy(renderInfo.bbox.minX, renderInfo.bbox.maxY);
-      const bottomRight = wToSxy(renderInfo.bbox.maxX, renderInfo.bbox.minY);
-      const screenW = bottomRight.x - topLeft.x;
-      const screenH = bottomRight.y - topLeft.y;
-      const visibleW = Math.min(canvas.width, Math.max(0, bottomRight.x)) - Math.max(0, topLeft.x);
-      const visibleH = Math.min(canvas.height, Math.max(0, bottomRight.y)) - Math.max(0, topLeft.y);
+      const screenBounds = getScreenBounds(renderInfo.bbox);
+      const screenW = screenBounds.maxX - screenBounds.minX;
+      const screenH = screenBounds.maxY - screenBounds.minY;
+      const visibleW = Math.min(canvas.width, Math.max(0, screenBounds.maxX)) - Math.max(0, screenBounds.minX);
+      const visibleH = Math.min(canvas.height, Math.max(0, screenBounds.maxY)) - Math.max(0, screenBounds.minY);
       if(visibleW < screenW/2 || visibleH < screenH/2) continue;
 
       ctx.save();
@@ -2348,13 +2387,18 @@ function renderStaticLayer(){
     const bbox = getPCBBbox();
     if(bbox){
       const {minX, minY, maxX, maxY} = bbox;
-      const topLeft = wToSxy(minX, maxY);
-      const bottomRight = wToSxy(maxX, minY);
-      const screenW = bottomRight.x - topLeft.x;
-      const screenH = bottomRight.y - topLeft.y;
+      const imageCenter = wToSxy((minX + maxX) / 2, (minY + maxY) / 2);
+      const screenW = (maxX - minX) * zoom;
+      const screenH = (maxY - minY) * zoom;
       ctx.save();
+      ctx.translate(imageCenter.x, imageCenter.y);
+      ctx.rotate(-rotationAngle);
       ctx.globalAlpha = 1.0;
-      ctx.drawImage(embeddedImage, topLeft.x, topLeft.y, screenW, screenH);
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+      ctx.shadowBlur = 18;
+      ctx.shadowOffsetX = 12;
+      ctx.shadowOffsetY = 14;
+      ctx.drawImage(embeddedImage, -screenW / 2, -screenH / 2, screenW, screenH);
       ctx.restore();
     }
   }
@@ -2409,14 +2453,14 @@ const fileParam = urlParams.get('file');
 if(fileParam){
   currentFileName = String(fileParam.split(/[\\/]/).pop() || 'board.json');
   document.getElementById('loading').classList.remove('hidden');
-  document.getElementById('loadingText').textContent = 'loading bitmap...';
+  document.getElementById('loadingText').textContent = 'Loading Multlayer';
   fetch(fileParam)
     .then(response => {
       if(!response.ok) throw new Error('404');
       return response.text();
     })
     .then(text => {
-      document.getElementById('loadingText').textContent = 'loading...';
+      document.getElementById('loadingText').textContent = 'Loading Multlayer';
       try {
         pcb = JSON.parse(text);
       } catch(err){
